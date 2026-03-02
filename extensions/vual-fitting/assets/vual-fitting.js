@@ -1200,15 +1200,18 @@
     var CACHE_KEY = "vual_fitting_status";
     var CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-    // Check sessionStorage cache first
+    // Check sessionStorage cache first — only cache enabled=true
+    // (disabled state is never cached so re-enabling takes effect immediately)
     try {
       var cached = sessionStorage.getItem(CACHE_KEY);
       if (cached) {
         var parsed = JSON.parse(cached);
-        if (Date.now() - parsed.ts < CACHE_TTL) {
-          callback(parsed.enabled);
+        if (parsed.enabled && Date.now() - parsed.ts < CACHE_TTL) {
+          callback(true);
           return;
         }
+        // Clear stale or disabled cache
+        sessionStorage.removeItem(CACHE_KEY);
       }
     } catch (e) {}
 
@@ -1218,7 +1221,12 @@
       .then(function (data) {
         var enabled = data.enabled !== false;
         try {
-          sessionStorage.setItem(CACHE_KEY, JSON.stringify({ enabled: enabled, ts: Date.now() }));
+          // Only cache enabled=true to allow quick re-enable
+          if (enabled) {
+            sessionStorage.setItem(CACHE_KEY, JSON.stringify({ enabled: true, ts: Date.now() }));
+          } else {
+            sessionStorage.removeItem(CACHE_KEY);
+          }
         } catch (e) {}
         callback(enabled);
       })
