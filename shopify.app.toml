@@ -2,7 +2,7 @@
 
 client_id = "27a76086f0298a73439b1e98ea6ebdef"
 name = "VUAL Studio"
-application_url = "https://example.com"
+application_url = "https://vual-shopify.vercel.app"
 embedded = true
 
 [build]
@@ -41,9 +41,9 @@ api_version = "2026-04"
 scopes = "read_products,write_products"
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [ "https://vual-shopify.vercel.app/api/auth" ]
 
 [app_proxy]
-url = "https://example.com/api/fitting"
+url = "https://vual-shopify.vercel.app/api/fitting"
 subpath = "vual-fitting"
 prefix = "apps"
