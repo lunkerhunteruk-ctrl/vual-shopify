@@ -11,9 +11,10 @@ const MAX_RETRIES = 3;
 
 export interface ModelSettings {
   gender: string;
-  height: number;
-  ethnicity: string;
+  height?: number;
+  ethnicity?: string;
   pose: string;
+  jewelryType?: string;
 }
 
 export interface SizeSpec {
@@ -27,6 +28,8 @@ export interface GarmentSize {
   sleeveLength?: number;
   shoulderWidth?: number;
 }
+
+export type JewelryCategory = "ring" | "necklace" | "earring" | "bracelet";
 
 export interface GenerationRequest {
   garmentImages: string[]; // base64 data URLs
@@ -42,6 +45,8 @@ export interface GenerationRequest {
   garmentSize?: GarmentSize;
   garmentSizeSpecs?: SizeSpec;
   locale?: string;
+  // Jewelry mode
+  jewelryCategory?: JewelryCategory;
 }
 
 export interface GenerationResult {
@@ -101,7 +106,8 @@ function extractBase64(dataUrl: string): {
 
 async function callGeminiAPI(
   parts: any[],
-  aspectRatio: string = "3:4"
+  aspectRatio: string = "3:4",
+  imageSize: string = "2K"
 ): Promise<any> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -115,7 +121,7 @@ async function callGeminiAPI(
       contents: [{ parts }],
       generationConfig: {
         responseModalities: ["TEXT", "IMAGE"],
-        imageConfig: { aspectRatio },
+        imageConfig: { aspectRatio, imageSize },
       },
       safetySettings: [
         {
@@ -204,7 +210,7 @@ function buildPrompt(req: GenerationRequest, counts: number[]): string {
 
   const modelDescription = modelImage
     ? `Generate an image using the EXACT model appearance from the provided model reference image (face, body type, skin tone must match exactly)`
-    : `A ${ethnicityDescriptions[modelSettings.ethnicity] || modelSettings.ethnicity} ${modelSettings.gender === "female" ? "woman" : "man"}`;
+    : `A ${modelSettings.ethnicity ? (ethnicityDescriptions[modelSettings.ethnicity] || modelSettings.ethnicity) : ""} ${modelSettings.gender === "female" ? "woman" : "man"}`;
 
   const multiImageNote =
     counts.some((c) => c > 1)
@@ -247,7 +253,11 @@ function buildPrompt(req: GenerationRequest, counts: number[]): string {
     `Realistic skin texture, natural pose, professional model.`,
     `IMPORTANT: Show the full body including feet if shoes/footwear are included.`,
     `CRITICAL: DO NOT render any text, labels, watermarks, or words on the image.`,
+    `CRITICAL: Generate EXACTLY ONE single model in ONE single pose. Do NOT create multiple copies, split views, collages, triptychs, or side-by-side variations of the model. The output must be ONE continuous photograph with ONE person.`,
     `OUTPUT FORMAT: Generate the image in ${req.aspectRatio} aspect ratio.`,
+    req.aspectRatio === "16:9"
+      ? `CINEMATIC 16:9 COMPOSITION: Use the wide frame to showcase the environment and location beautifully. Compose like a cinematic film still — the model placed naturally within a grand, expansive scene. Maximize the beauty of the background landscape and setting. Let the environment breathe and tell a story alongside the fashion.`
+      : "",
     `REMINDER: The garments MUST be exact copies from the reference images.`,
   ];
 
@@ -257,13 +267,15 @@ function buildPrompt(req: GenerationRequest, counts: number[]): string {
 function buildSimplifiedPrompt(req: GenerationRequest): string {
   const { modelSettings, modelImage, background, customPrompt } = req;
   const gender = modelSettings.gender === "female" ? "woman" : "man";
-  const ethnicity =
-    ethnicityDescriptions[modelSettings.ethnicity] || modelSettings.ethnicity;
+  const ethnicity = modelSettings.ethnicity
+    ? (ethnicityDescriptions[modelSettings.ethnicity] || modelSettings.ethnicity)
+    : "";
   const model = modelImage
     ? "the model from the reference image"
-    : `a ${ethnicity} ${gender}`;
+    : ethnicity ? `a ${ethnicity} ${gender}` : `a ${gender}`;
   const styleNote = customPrompt ? ` IMPORTANT STYLING: ${customPrompt}.` : "";
-  return `E-commerce fashion photography: ${model}, ${modelSettings.height}cm tall, ${poseDescriptions[modelSettings.pose] || modelSettings.pose}, wearing the garment(s) from the provided reference images.${styleNote} ${backgroundDescriptions[background] || background}. ${req.aspectRatio} aspect ratio. Full body shot, professional quality, no text or watermarks.`;
+  const wideNote = req.aspectRatio === "16:9" ? " Cinematic wide composition — showcase the environment beautifully, model placed naturally within an expansive scene like a film still." : "";
+  return `E-commerce fashion photography: ${model}, ${modelSettings.height}cm tall, ${poseDescriptions[modelSettings.pose] || modelSettings.pose}, wearing the garment(s) from the provided reference images.${styleNote} ${backgroundDescriptions[background] || background}. ${req.aspectRatio} aspect ratio. Full body shot, professional quality, no text or watermarks. IMPORTANT: Generate exactly ONE single model in ONE pose — no collages, split views, or multiple copies.${wideNote}`;
 }
 
 function buildMinimalPrompt(req: GenerationRequest): string {
@@ -271,7 +283,126 @@ function buildMinimalPrompt(req: GenerationRequest): string {
   const gender = modelSettings.gender === "female" ? "woman" : "man";
   const model = modelImage ? "this person" : `a ${gender}`;
   const styleNote = customPrompt ? ` ${customPrompt}.` : "";
-  return `Fashion catalog photo: ${model} wearing the garment(s) from the reference images.${styleNote} ${backgroundDescriptions[background] || "White background"}. ${req.aspectRatio} aspect ratio. Full body, clean photo.`;
+  const wideNote = req.aspectRatio === "16:9" ? " Cinematic wide shot — grand environment, model within an expansive beautiful scene." : "";
+  return `Fashion catalog photo: ${model} wearing the garment(s) from the reference images.${styleNote} ${backgroundDescriptions[background] || "White background"}. ${req.aspectRatio} aspect ratio. Full body, clean photo. ONE single model only, no collages or split views.${wideNote}`;
+}
+
+// --- Jewelry prompt builders ---
+
+const jewelryBackgrounds: Record<string, string> = {
+  studioWhite: "clean white studio background with soft diffused lighting, elegant and minimal",
+  studioGray: "neutral gray backdrop with professional jewelry photography lighting",
+  marble: "polished white marble surface with subtle veining, luxury feel",
+  velvet: "dark velvet fabric background with soft spotlight, high-end jewelry display",
+  natural: "soft natural light on neutral linen fabric, organic and refined",
+};
+
+function isJewelryRequest(req: GenerationRequest): boolean {
+  return !!req.jewelryCategory;
+}
+
+function jewelryBodyPart(cat: JewelryCategory): string {
+  switch (cat) {
+    case "ring": return "hand and fingers";
+    case "necklace": return "neck and décolletage";
+    case "earring": return "ear and side of face";
+    case "bracelet": return "wrist and forearm";
+  }
+}
+
+const jewelryPoseDescriptions: Record<string, Record<string, string>> = {
+  ring: {
+    flat: "hand laid flat with fingers elegantly spread, top-down view",
+    angled: "hand at a 45-degree angle, showing the ring from a flattering perspective",
+    fist: "hand gently closed with ring prominently displayed on the finger",
+    stacked: "multiple rings shown in a stacking arrangement on adjacent fingers",
+  },
+  necklace: {
+    front: "front-facing view of the neck and chest area, necklace centered",
+    side: "three-quarter angle showing the necklace draping along the collarbone",
+    closeup: "extreme close-up of the pendant or centerpiece detail",
+    decollete: "elegant décolleté shot showing the full necklace chain and pendant",
+  },
+  earring: {
+    front: "front-facing view showing both ears with earrings",
+    profile: "side profile view highlighting the earring against the jawline",
+    "three-quarter": "three-quarter angle showing the earring's dimension and movement",
+    pair: "symmetrical view showing both earrings from a slight distance",
+  },
+  bracelet: {
+    flat: "wrist laid flat showing the bracelet from above",
+    angled: "wrist at an angle showing the bracelet's clasp and detail",
+    stacked: "multiple bracelets in a layered arrangement on the wrist",
+    lifestyle: "casual lifestyle pose with the bracelet visible on the wrist",
+  },
+};
+
+function buildJewelryPrompt(req: GenerationRequest): string {
+  const cat = req.jewelryCategory!;
+  const bodyPart = jewelryBodyPart(cat);
+  const bg = jewelryBackgrounds[req.background] || jewelryBackgrounds.studioWhite;
+  const gender = req.modelSettings.gender === "female" ? "woman's" : "man's";
+  const ethnicity = req.modelSettings.ethnicity
+    ? (ethnicityDescriptions[req.modelSettings.ethnicity] || req.modelSettings.ethnicity)
+    : "";
+  const poseDesc = jewelryPoseDescriptions[cat]?.[req.modelSettings.pose] || "";
+  const customNote = req.customPrompt ? `\nMANDATORY STYLING: ${req.customPrompt}.` : "";
+  const modelRef = req.modelImage
+    ? `Use the EXACT ${bodyPart} from the provided model reference photo (skin tone, hand shape, nail style must match exactly).`
+    : ethnicity
+      ? `A ${ethnicity} ${gender} ${bodyPart}, elegant and well-groomed.`
+      : `A ${gender} ${bodyPart}, elegant and well-groomed.`;
+
+  return [
+    `CRITICAL INSTRUCTION — JEWELRY FIDELITY IS THE TOP PRIORITY:`,
+    `You MUST reproduce the EXACT jewelry piece from the provided reference image(s) with 100% accuracy.`,
+    `DO NOT create similar-looking alternatives. The jewelry must be a PIXEL-PERFECT match to the original.`,
+    ``,
+    `JEWELRY DETAILS TO PRESERVE EXACTLY:`,
+    `- Exact metal color and finish (gold, silver, rose gold, matte, polished)`,
+    `- Exact gemstone color, cut, size, and arrangement`,
+    `- Exact design pattern, engravings, and decorative elements`,
+    `- Exact chain style, link pattern, and clasp design`,
+    `- Exact proportions and scale relative to the body`,
+    `- Exact surface texture and reflections`,
+    ``,
+    `Professional high-end jewelry photography.`,
+    modelRef,
+    `The jewelry piece (${cat}) is worn naturally on the ${bodyPart}.`,
+    poseDesc ? `POSE/ANGLE: ${poseDesc}.` : "",
+    `Close-up shot focused on the ${bodyPart} wearing the jewelry.`,
+    `${bg}.`,
+    customNote,
+    `Extremely sharp focus on the jewelry details.`,
+    `Professional macro-quality lighting that highlights the metal luster and gemstone brilliance.`,
+    `Ultra high resolution, 4K detail, luxury jewelry catalog quality.`,
+    `Photorealistic skin texture with natural tones.`,
+    `CRITICAL: Show ONLY the ${bodyPart} area — this is a close-up jewelry shot, NOT a full body photo.`,
+    `CRITICAL: DO NOT render any text, labels, watermarks, or words on the image.`,
+    `CRITICAL: Generate EXACTLY ONE single close-up shot. Do NOT create collages, split views, or multiple copies.`,
+    `REMINDER: The jewelry MUST be an exact copy from the reference image(s).`,
+  ].filter(Boolean).join(" ");
+}
+
+function buildSimplifiedJewelryPrompt(req: GenerationRequest): string {
+  const cat = req.jewelryCategory!;
+  const bodyPart = jewelryBodyPart(cat);
+  const gender = req.modelSettings.gender === "female" ? "woman's" : "man's";
+  const bg = jewelryBackgrounds[req.background] || "white background";
+  const poseDesc = jewelryPoseDescriptions[cat]?.[req.modelSettings.pose] || "";
+  const customNote = req.customPrompt ? ` ${req.customPrompt}.` : "";
+  const modelRef = req.modelImage ? "the model reference" : `a ${gender}`;
+  const poseNote = poseDesc ? ` Pose: ${poseDesc}.` : "";
+  return `Jewelry product photography: The ${cat} from the reference image worn on ${modelRef} ${bodyPart}.${poseNote} Close-up shot, ${bg}.${customNote} Sharp focus on jewelry details, luxury catalog quality, 4K. No text or watermarks. One image only.`;
+}
+
+function buildMinimalJewelryPrompt(req: GenerationRequest): string {
+  const cat = req.jewelryCategory!;
+  const bodyPart = jewelryBodyPart(cat);
+  const poseDesc = jewelryPoseDescriptions[cat]?.[req.modelSettings.pose] || "";
+  const customNote = req.customPrompt ? ` ${req.customPrompt}.` : "";
+  const poseNote = poseDesc ? ` ${poseDesc}.` : "";
+  return `Close-up photo: ${cat} from the reference image on a ${bodyPart}.${poseNote}${customNote} Elegant, sharp focus, clean background. One image.`;
 }
 
 // --- Main generation function ---
@@ -327,11 +458,21 @@ export async function generateImage(
   }
 
   const counts = allImageSets.map((set) => set.length);
-  const promptVariants = [
-    buildPrompt(req, counts),
-    buildSimplifiedPrompt(req),
-    buildMinimalPrompt(req),
-  ];
+  const jewelry = isJewelryRequest(req);
+
+  const promptVariants = jewelry
+    ? [
+        buildJewelryPrompt(req),
+        buildSimplifiedJewelryPrompt(req),
+        buildMinimalJewelryPrompt(req),
+      ]
+    : [
+        buildPrompt(req, counts),
+        buildSimplifiedPrompt(req),
+        buildMinimalPrompt(req),
+      ];
+
+  const imageSize = "2K";
 
   let lastError: Error | null = null;
 
@@ -340,11 +481,11 @@ export async function generateImage(
       const prompt =
         promptVariants[attempt] || promptVariants[promptVariants.length - 1];
       console.log(
-        `[VUAL Studio] Attempt ${attempt + 1}/${MAX_RETRIES} using ${GEMINI_MODEL}...`
+        `[VUAL Studio] Attempt ${attempt + 1}/${MAX_RETRIES} using ${GEMINI_MODEL}${jewelry ? " (jewelry)" : ""}...`
       );
 
       const parts = [{ text: prompt }, ...imageParts];
-      const data = await callGeminiAPI(parts, req.aspectRatio);
+      const data = await callGeminiAPI(parts, req.aspectRatio, imageSize);
 
       const candidates = data.candidates || [];
       const finishReason = candidates[0]?.finishReason;

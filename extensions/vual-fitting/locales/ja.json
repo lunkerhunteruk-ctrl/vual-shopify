@@ -1,0 +1,35 @@
+{
+  "name": "VUAL 試着",
+  "settings": {
+    "button_text_en": {
+      "label": "ボタンテキスト（英語）"
+    },
+    "button_text_ja": {
+      "label": "ボタンテキスト（日本語）"
+    },
+    "button_color": {
+      "label": "ボタンの色"
+    },
+    "button_text_color": {
+      "label": "ボタン文字色"
+    },
+    "button_radius": {
+      "label": "ボタン角丸"
+    },
+    "button_font_size": {
+      "label": "ボタンフォントサイズ"
+    },
+    "button_width": {
+      "label": "ボタン幅"
+    },
+    "margin_top": {
+      "label": "上マージン"
+    },
+    "margin_bottom": {
+      "label": "下マージン"
+    },
+    "garment_category": {
+      "label": "衣類カテゴリ"
+    }
+  }
+}

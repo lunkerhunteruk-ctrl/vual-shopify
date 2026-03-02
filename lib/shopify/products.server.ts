@@ -9,6 +9,7 @@ export interface ShopifyProduct {
   id: string;
   title: string;
   handle: string;
+  description: string;
   featuredImage: { url: string; altText: string | null } | null;
   images: { id: string; url: string; altText: string | null }[];
   variants: {
@@ -18,6 +19,7 @@ export interface ShopifyProduct {
     image: { url: string } | null;
   }[];
   productType: string;
+  vendor: string;
 }
 
 const PRODUCTS_QUERY = `
@@ -28,7 +30,9 @@ const PRODUCTS_QUERY = `
           id
           title
           handle
+          description
           productType
+          vendor
           featuredImage {
             url
             altText
@@ -89,7 +93,9 @@ export async function fetchProducts(
     id: edge.node.id,
     title: edge.node.title,
     handle: edge.node.handle,
+    description: edge.node.description || "",
     productType: edge.node.productType,
+    vendor: edge.node.vendor || "",
     featuredImage: edge.node.featuredImage,
     images: (edge.node.images?.edges || []).map((ie: any) => ie.node),
     variants: (edge.node.variants?.edges || []).map((ve: any) => ve.node),

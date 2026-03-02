@@ -32,7 +32,8 @@ export async function createCollection(
   admin: AdminApiContext,
   title: string,
   productIds: string[],
-  imageUrl?: string
+  imageUrl?: string,
+  descriptionHtml?: string
 ): Promise<{
   success: boolean;
   collectionId?: string;
@@ -47,6 +48,10 @@ export async function createCollection(
 
     if (imageUrl) {
       input.image = { src: imageUrl };
+    }
+
+    if (descriptionHtml) {
+      input.descriptionHtml = descriptionHtml;
     }
 
     const response = await admin.graphql(COLLECTION_CREATE_MUTATION, {

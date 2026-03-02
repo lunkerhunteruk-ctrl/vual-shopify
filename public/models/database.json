@@ -1,0 +1,394 @@
+{
+  "models": [
+    {
+      "id": "jp-f-18-stand-001",
+      "gender": "female",
+      "ageRange": "18-24",
+      "ethnicity": "japanese",
+      "pose": "standing",
+      "thumbnail": "/models/images/female/18-24/japanese/standing/jp-f-18-stand-001.jpg",
+      "fullImage": "/models/images/female/18-24/japanese/standing/jp-f-18-stand-001.jpg"
+    },
+    {
+      "id": "jp-f-18-stand-002",
+      "gender": "female",
+      "ageRange": "18-24",
+      "ethnicity": "japanese",
+      "pose": "standing",
+      "thumbnail": "/models/images/female/18-24/japanese/standing/jp-f-18-stand-002.jpg",
+      "fullImage": "/models/images/female/18-24/japanese/standing/jp-f-18-stand-002.jpg"
+    },
+    {
+      "id": "jp-f-18-stand-003",
+      "gender": "female",
+      "ageRange": "18-24",
+      "ethnicity": "japanese",
+      "pose": "standing",
+      "thumbnail": "/models/images/female/18-24/japanese/standing/jp-f-18-stand-003.jpg",
+      "fullImage": "/models/images/female/18-24/japanese/standing/jp-f-18-stand-003.jpg"
+    },
+    {
+      "id": "jp-f-18-stand-004",
+      "gender": "female",
+      "ageRange": "18-24",
+      "ethnicity": "japanese",
+      "pose": "standing",
+      "thumbnail": "/models/images/female/18-24/japanese/standing/jp-f-18-stand-004.jpg",
+      "fullImage": "/models/images/female/18-24/japanese/standing/jp-f-18-stand-004.jpg"
+    },
+    {
+      "id": "ee-f-18-stand-001",
+      "gender": "female",
+      "ageRange": "18-24",
+      "ethnicity": "eastern-european",
+      "pose": "standing",
+      "thumbnail": "/models/images/female/18-24/eastern-european/standing/ee-f-18-stand-001.jpg",
+      "fullImage": "/models/images/female/18-24/eastern-european/standing/ee-f-18-stand-001.jpg"
+    },
+    {
+      "id": "ee-f-18-stand-002",
+      "gender": "female",
+      "ageRange": "18-24",
+      "ethnicity": "eastern-european",
+      "pose": "standing",
+      "thumbnail": "/models/images/female/18-24/eastern-european/standing/ee-f-18-stand-002.jpg",
+      "fullImage": "/models/images/female/18-24/eastern-european/standing/ee-f-18-stand-002.jpg"
+    },
+    {
+      "id": "ee-f-18-stand-003",
+      "gender": "female",
+      "ageRange": "18-24",
+      "ethnicity": "eastern-european",
+      "pose": "standing",
+      "thumbnail": "/models/images/female/18-24/eastern-european/standing/ee-f-18-stand-003.jpg",
+      "fullImage": "/models/images/female/18-24/eastern-european/standing/ee-f-18-stand-003.jpg"
+    },
+    {
+      "id": "ee-f-18-stand-004",
+      "gender": "female",
+      "ageRange": "18-24",
+      "ethnicity": "eastern-european",
+      "pose": "standing",
+      "thumbnail": "/models/images/female/18-24/eastern-european/standing/ee-f-18-stand-004.jpg",
+      "fullImage": "/models/images/female/18-24/eastern-european/standing/ee-f-18-stand-004.jpg"
+    }
+  ],
+  "jewelryModels": [
+    {
+      "id": "ring-f-001",
+      "gender": "female",
+      "jewelryType": "ring",
+      "pose": "flat",
+      "thumbnail": "/models/images/jewelry/ring/ring-f-001.jpg",
+      "fullImage": "/models/images/jewelry/ring/ring-f-001.jpg"
+    },
+    {
+      "id": "ring-f-002",
+      "gender": "female",
+      "jewelryType": "ring",
+      "pose": "angled",
+      "thumbnail": "/models/images/jewelry/ring/ring-f-002.jpg",
+      "fullImage": "/models/images/jewelry/ring/ring-f-002.jpg"
+    },
+    {
+      "id": "ring-f-003",
+      "gender": "female",
+      "jewelryType": "ring",
+      "pose": "fist",
+      "thumbnail": "/models/images/jewelry/ring/ring-f-003.jpg",
+      "fullImage": "/models/images/jewelry/ring/ring-f-003.jpg"
+    },
+    {
+      "id": "ring-f-004",
+      "gender": "female",
+      "jewelryType": "ring",
+      "pose": "stacked",
+      "thumbnail": "/models/images/jewelry/ring/ring-f-004.jpg",
+      "fullImage": "/models/images/jewelry/ring/ring-f-004.jpg"
+    },
+    {
+      "id": "ring-m-001",
+      "gender": "male",
+      "jewelryType": "ring",
+      "pose": "flat",
+      "thumbnail": "/models/images/jewelry/ring/ring-m-001.jpg",
+      "fullImage": "/models/images/jewelry/ring/ring-m-001.jpg"
+    },
+    {
+      "id": "ring-m-002",
+      "gender": "male",
+      "jewelryType": "ring",
+      "pose": "angled",
+      "thumbnail": "/models/images/jewelry/ring/ring-m-002.jpg",
+      "fullImage": "/models/images/jewelry/ring/ring-m-002.jpg"
+    },
+    {
+      "id": "ring-m-003",
+      "gender": "male",
+      "jewelryType": "ring",
+      "pose": "fist",
+      "thumbnail": "/models/images/jewelry/ring/ring-m-003.jpg",
+      "fullImage": "/models/images/jewelry/ring/ring-m-003.jpg"
+    },
+    {
+      "id": "ring-m-004",
+      "gender": "male",
+      "jewelryType": "ring",
+      "pose": "stacked",
+      "thumbnail": "/models/images/jewelry/ring/ring-m-004.jpg",
+      "fullImage": "/models/images/jewelry/ring/ring-m-004.jpg"
+    },
+    {
+      "id": "necklace-f-001",
+      "gender": "female",
+      "jewelryType": "necklace",
+      "pose": "front",
+      "thumbnail": "/models/images/jewelry/necklace/necklace-f-001.jpg",
+      "fullImage": "/models/images/jewelry/necklace/necklace-f-001.jpg"
+    },
+    {
+      "id": "necklace-f-002",
+      "gender": "female",
+      "jewelryType": "necklace",
+      "pose": "side",
+      "thumbnail": "/models/images/jewelry/necklace/necklace-f-002.jpg",
+      "fullImage": "/models/images/jewelry/necklace/necklace-f-002.jpg"
+    },
+    {
+      "id": "necklace-f-003",
+      "gender": "female",
+      "jewelryType": "necklace",
+      "pose": "closeup",
+      "thumbnail": "/models/images/jewelry/necklace/necklace-f-003.jpg",
+      "fullImage": "/models/images/jewelry/necklace/necklace-f-003.jpg"
+    },
+    {
+      "id": "necklace-f-004",
+      "gender": "female",
+      "jewelryType": "necklace",
+      "pose": "decollete",
+      "thumbnail": "/models/images/jewelry/necklace/necklace-f-004.jpg",
+      "fullImage": "/models/images/jewelry/necklace/necklace-f-004.jpg"
+    },
+    {
+      "id": "necklace-m-001",
+      "gender": "male",
+      "jewelryType": "necklace",
+      "pose": "front",
+      "thumbnail": "/models/images/jewelry/necklace/necklace-m-001.jpg",
+      "fullImage": "/models/images/jewelry/necklace/necklace-m-001.jpg"
+    },
+    {
+      "id": "necklace-m-002",
+      "gender": "male",
+      "jewelryType": "necklace",
+      "pose": "side",
+      "thumbnail": "/models/images/jewelry/necklace/necklace-m-002.jpg",
+      "fullImage": "/models/images/jewelry/necklace/necklace-m-002.jpg"
+    },
+    {
+      "id": "necklace-m-003",
+      "gender": "male",
+      "jewelryType": "necklace",
+      "pose": "closeup",
+      "thumbnail": "/models/images/jewelry/necklace/necklace-m-003.jpg",
+      "fullImage": "/models/images/jewelry/necklace/necklace-m-003.jpg"
+    },
+    {
+      "id": "necklace-m-004",
+      "gender": "male",
+      "jewelryType": "necklace",
+      "pose": "decollete",
+      "thumbnail": "/models/images/jewelry/necklace/necklace-m-004.jpg",
+      "fullImage": "/models/images/jewelry/necklace/necklace-m-004.jpg"
+    },
+    {
+      "id": "earring-f-001",
+      "gender": "female",
+      "jewelryType": "earring",
+      "pose": "front",
+      "thumbnail": "/models/images/jewelry/earring/earring-f-001.jpg",
+      "fullImage": "/models/images/jewelry/earring/earring-f-001.jpg"
+    },
+    {
+      "id": "earring-f-002",
+      "gender": "female",
+      "jewelryType": "earring",
+      "pose": "profile",
+      "thumbnail": "/models/images/jewelry/earring/earring-f-002.jpg",
+      "fullImage": "/models/images/jewelry/earring/earring-f-002.jpg"
+    },
+    {
+      "id": "earring-f-003",
+      "gender": "female",
+      "jewelryType": "earring",
+      "pose": "three-quarter",
+      "thumbnail": "/models/images/jewelry/earring/earring-f-003.jpg",
+      "fullImage": "/models/images/jewelry/earring/earring-f-003.jpg"
+    },
+    {
+      "id": "earring-f-004",
+      "gender": "female",
+      "jewelryType": "earring",
+      "pose": "pair",
+      "thumbnail": "/models/images/jewelry/earring/earring-f-004.jpg",
+      "fullImage": "/models/images/jewelry/earring/earring-f-004.jpg"
+    },
+    {
+      "id": "earring-m-001",
+      "gender": "male",
+      "jewelryType": "earring",
+      "pose": "front",
+      "thumbnail": "/models/images/jewelry/earring/earring-m-001.jpg",
+      "fullImage": "/models/images/jewelry/earring/earring-m-001.jpg"
+    },
+    {
+      "id": "earring-m-002",
+      "gender": "male",
+      "jewelryType": "earring",
+      "pose": "profile",
+      "thumbnail": "/models/images/jewelry/earring/earring-m-002.jpg",
+      "fullImage": "/models/images/jewelry/earring/earring-m-002.jpg"
+    },
+    {
+      "id": "earring-m-003",
+      "gender": "male",
+      "jewelryType": "earring",
+      "pose": "three-quarter",
+      "thumbnail": "/models/images/jewelry/earring/earring-m-003.jpg",
+      "fullImage": "/models/images/jewelry/earring/earring-m-003.jpg"
+    },
+    {
+      "id": "earring-m-004",
+      "gender": "male",
+      "jewelryType": "earring",
+      "pose": "pair",
+      "thumbnail": "/models/images/jewelry/earring/earring-m-004.jpg",
+      "fullImage": "/models/images/jewelry/earring/earring-m-004.jpg"
+    },
+    {
+      "id": "bracelet-f-001",
+      "gender": "female",
+      "jewelryType": "bracelet",
+      "pose": "flat",
+      "thumbnail": "/models/images/jewelry/bracelet/bracelet-f-001.jpg",
+      "fullImage": "/models/images/jewelry/bracelet/bracelet-f-001.jpg"
+    },
+    {
+      "id": "bracelet-f-002",
+      "gender": "female",
+      "jewelryType": "bracelet",
+      "pose": "angled",
+      "thumbnail": "/models/images/jewelry/bracelet/bracelet-f-002.jpg",
+      "fullImage": "/models/images/jewelry/bracelet/bracelet-f-002.jpg"
+    },
+    {
+      "id": "bracelet-f-003",
+      "gender": "female",
+      "jewelryType": "bracelet",
+      "pose": "stacked",
+      "thumbnail": "/models/images/jewelry/bracelet/bracelet-f-003.jpg",
+      "fullImage": "/models/images/jewelry/bracelet/bracelet-f-003.jpg"
+    },
+    {
+      "id": "bracelet-f-004",
+      "gender": "female",
+      "jewelryType": "bracelet",
+      "pose": "lifestyle",
+      "thumbnail": "/models/images/jewelry/bracelet/bracelet-f-004.jpg",
+      "fullImage": "/models/images/jewelry/bracelet/bracelet-f-004.jpg"
+    },
+    {
+      "id": "bracelet-m-001",
+      "gender": "male",
+      "jewelryType": "bracelet",
+      "pose": "flat",
+      "thumbnail": "/models/images/jewelry/bracelet/bracelet-m-001.jpg",
+      "fullImage": "/models/images/jewelry/bracelet/bracelet-m-001.jpg"
+    },
+    {
+      "id": "bracelet-m-002",
+      "gender": "male",
+      "jewelryType": "bracelet",
+      "pose": "angled",
+      "thumbnail": "/models/images/jewelry/bracelet/bracelet-m-002.jpg",
+      "fullImage": "/models/images/jewelry/bracelet/bracelet-m-002.jpg"
+    },
+    {
+      "id": "bracelet-m-003",
+      "gender": "male",
+      "jewelryType": "bracelet",
+      "pose": "stacked",
+      "thumbnail": "/models/images/jewelry/bracelet/bracelet-m-003.jpg",
+      "fullImage": "/models/images/jewelry/bracelet/bracelet-m-003.jpg"
+    },
+    {
+      "id": "bracelet-m-004",
+      "gender": "male",
+      "jewelryType": "bracelet",
+      "pose": "lifestyle",
+      "thumbnail": "/models/images/jewelry/bracelet/bracelet-m-004.jpg",
+      "fullImage": "/models/images/jewelry/bracelet/bracelet-m-004.jpg"
+    }
+  ],
+  "ethnicities": [
+    { "id": "japanese", "labelEn": "Japanese", "labelJa": "日本人" },
+    { "id": "korean", "labelEn": "Korean", "labelJa": "韓国人" },
+    { "id": "chinese", "labelEn": "Chinese", "labelJa": "中国人" },
+    { "id": "eastern-european", "labelEn": "Eastern European", "labelJa": "東欧系白人" },
+    { "id": "western-european", "labelEn": "Western European", "labelJa": "西欧系白人" },
+    { "id": "african", "labelEn": "African", "labelJa": "アフリカ系" },
+    { "id": "latin", "labelEn": "Latin", "labelJa": "ラテン系" },
+    { "id": "middle-eastern", "labelEn": "Middle Eastern", "labelJa": "中東系" },
+    { "id": "south-asian", "labelEn": "South Asian", "labelJa": "南アジア系" },
+    { "id": "southeast-asian", "labelEn": "Southeast Asian", "labelJa": "東南アジア系" }
+  ],
+  "jewelryTypes": [
+    { "id": "ring", "labelEn": "Ring", "labelJa": "リング" },
+    { "id": "necklace", "labelEn": "Necklace", "labelJa": "ネックレス" },
+    { "id": "earring", "labelEn": "Earring", "labelJa": "ピアス・イヤリング" },
+    { "id": "bracelet", "labelEn": "Bracelet", "labelJa": "ブレスレット" }
+  ],
+  "jewelryPoses": {
+    "ring": [
+      { "id": "flat", "labelEn": "Flat Hand", "labelJa": "手を広げて" },
+      { "id": "angled", "labelEn": "Angled Hand", "labelJa": "手を斜めに" },
+      { "id": "fist", "labelEn": "Gentle Fist", "labelJa": "軽く握る" },
+      { "id": "stacked", "labelEn": "Stacked Rings", "labelJa": "重ね付け" }
+    ],
+    "necklace": [
+      { "id": "front", "labelEn": "Front View", "labelJa": "正面" },
+      { "id": "side", "labelEn": "Side Angle", "labelJa": "横角度" },
+      { "id": "closeup", "labelEn": "Pendant Close-up", "labelJa": "ペンダント寄り" },
+      { "id": "decollete", "labelEn": "Décolleté", "labelJa": "デコルテ" }
+    ],
+    "earring": [
+      { "id": "front", "labelEn": "Front View", "labelJa": "正面" },
+      { "id": "profile", "labelEn": "Profile", "labelJa": "横顔" },
+      { "id": "three-quarter", "labelEn": "3/4 Angle", "labelJa": "斜め" },
+      { "id": "pair", "labelEn": "Both Ears", "labelJa": "両耳" }
+    ],
+    "bracelet": [
+      { "id": "flat", "labelEn": "Flat Wrist", "labelJa": "手首を見せて" },
+      { "id": "angled", "labelEn": "Angled Wrist", "labelJa": "手首を斜めに" },
+      { "id": "stacked", "labelEn": "Stacked Look", "labelJa": "重ね付け" },
+      { "id": "lifestyle", "labelEn": "Lifestyle", "labelJa": "ライフスタイル" }
+    ]
+  },
+  "ageRanges": [
+    { "id": "18-24", "labelEn": "18-24", "labelJa": "18-24歳" },
+    { "id": "25-34", "labelEn": "25-34", "labelJa": "25-34歳" },
+    { "id": "35-44", "labelEn": "35-44", "labelJa": "35-44歳" },
+    { "id": "45-54", "labelEn": "45-54", "labelJa": "45-54歳" }
+  ],
+  "poses": [
+    { "id": "standing", "labelEn": "Standing", "labelJa": "スタンディング" },
+    { "id": "walking", "labelEn": "Walking", "labelJa": "ウォーキング" },
+    { "id": "sitting", "labelEn": "Sitting", "labelJa": "シッティング" },
+    { "id": "dynamic", "labelEn": "Dynamic", "labelJa": "ダイナミック" }
+  ],
+  "genders": [
+    { "id": "female", "labelEn": "Female", "labelJa": "女性" },
+    { "id": "male", "labelEn": "Male", "labelJa": "男性" }
+  ]
+}

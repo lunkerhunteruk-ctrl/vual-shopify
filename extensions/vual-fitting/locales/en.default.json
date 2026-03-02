@@ -1,0 +1,35 @@
+{
+  "name": "VUAL Try-On",
+  "settings": {
+    "button_text_en": {
+      "label": "Button text (English)"
+    },
+    "button_text_ja": {
+      "label": "Button text (Japanese)"
+    },
+    "button_color": {
+      "label": "Button color"
+    },
+    "button_text_color": {
+      "label": "Button text color"
+    },
+    "button_radius": {
+      "label": "Button corner radius"
+    },
+    "button_font_size": {
+      "label": "Button font size"
+    },
+    "button_width": {
+      "label": "Button width"
+    },
+    "margin_top": {
+      "label": "Top margin"
+    },
+    "margin_bottom": {
+      "label": "Bottom margin"
+    },
+    "garment_category": {
+      "label": "Garment category"
+    }
+  }
+}
