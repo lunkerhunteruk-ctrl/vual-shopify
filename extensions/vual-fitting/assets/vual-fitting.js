@@ -1197,31 +1197,10 @@
   // ============================
 
   function checkFittingStatus(callback) {
-    var CACHE_KEY = "vual_fitting_status";
-    var CACHE_TTL = 30 * 1000; // 30 seconds — short enough for toggle changes to reflect quickly
-
-    // Check sessionStorage cache first
-    try {
-      var cached = sessionStorage.getItem(CACHE_KEY);
-      if (cached) {
-        var parsed = JSON.parse(cached);
-        if (Date.now() - parsed.ts < CACHE_TTL) {
-          callback(parsed.enabled);
-          return;
-        }
-        sessionStorage.removeItem(CACHE_KEY);
-      }
-    } catch (e) {}
-
-    // Fetch status from App Proxy
     fetch(state.proxyUrl + "?check=status", { method: "GET" })
       .then(function (res) { return res.json(); })
       .then(function (data) {
-        var enabled = data.enabled !== false;
-        try {
-          sessionStorage.setItem(CACHE_KEY, JSON.stringify({ enabled: enabled, ts: Date.now() }));
-        } catch (e) {}
-        callback(enabled);
+        callback(data.enabled !== false);
       })
       .catch(function () {
         callback(true); // fail-open: show button on network error
