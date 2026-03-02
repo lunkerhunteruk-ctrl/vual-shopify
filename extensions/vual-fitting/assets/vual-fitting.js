@@ -1225,12 +1225,11 @@
       state.modelSettings = savedModel;
     }
 
-    // Check if fitting is enabled before wiring up the button
+    // Check if fitting is enabled before showing the button
+    // (root starts hidden via display:none in Liquid to prevent flash)
     checkFittingStatus(function (enabled) {
-      if (!enabled) {
-        state.root.style.display = "none";
-        return;
-      }
+      if (!enabled) return;
+      state.root.style.display = "";
       initButton();
     });
   }
