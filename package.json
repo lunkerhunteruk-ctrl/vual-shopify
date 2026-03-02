@@ -2,8 +2,8 @@
   "name": "vual-studio-shopify",
   "private": true,
   "scripts": {
-    "build": "prisma generate && remix vite:build",
-    "postinstall": "prisma generate",
+    "build": "npx prisma generate && remix vite:build",
+    "postinstall": "npx prisma generate",
     "dev": "shopify app dev",
     "config:link": "shopify app config link",
     "generate": "shopify app generate",
