@@ -175,6 +175,7 @@ function buildCoordinatePrompt(
     ``,
     `Generate a professional fashion photo for virtual try-on.`,
     `The FIRST image is the customer's photo — use their EXACT face, body type, pose, and skin tone.`,
+    `IMPORTANT: Completely REMOVE whatever clothing the customer is currently wearing. Replace ALL existing garments entirely with ONLY the provided reference garments. No part of the customer's original clothing should be visible.`,
     modelDesc,
     `Dress this person in a coordinated outfit using ALL of the following garments: ${allGarments}.`,
     ``,
@@ -196,7 +197,7 @@ function buildSimplifiedCoordinatePrompt(
 ): string {
   const items = categories.map((c) => categoryLabel(c)).join(", ");
   const modelDesc = buildModelDesc(modelSettings);
-  return `Virtual try-on: Show the person from the first image wearing these items from the garment images: ${items}. ${modelDesc} Professional fashion photography, white background, full body. One person only, no collages. Garments must match the reference images exactly.`;
+  return `Virtual try-on: Show the person from the first image wearing these items from the garment images: ${items}. Remove all original clothing the person is wearing — only the provided garments should be visible. ${modelDesc} Professional fashion photography, white background, full body. One person only, no collages. Garments must match the reference images exactly.`;
 }
 
 function buildMinimalCoordinatePrompt(
@@ -205,7 +206,7 @@ function buildMinimalCoordinatePrompt(
 ): string {
   const items = categories.map((c) => categoryLabel(c)).join(", ");
   const modelDesc = buildModelDesc(modelSettings);
-  return `Fashion photo: Person from image 1 wearing the ${items} from the other images. ${modelDesc} White background, full body, one person.`;
+  return `Fashion photo: Person from image 1 wearing the ${items} from the other images. Remove all original clothing. ${modelDesc} White background, full body, one person.`;
 }
 
 // --- Jewelry VTON helpers ---
@@ -313,9 +314,9 @@ export async function generateVTON(
         buildMinimalCoordinatePrompt(request.categories, request.modelSettings),
       ];
 
-  // Jewelry: 1:1 aspect, 1K size; Fashion: 3:4, 1K
+  // Jewelry: 1:1 aspect; Fashion: 3:4
   const vtonAspectRatio = jewelry ? "1:1" : "3:4";
-  const vtonImageSize = "1K";
+  const vtonImageSize = "2K";
 
   let lastError: Error | null = null;
 

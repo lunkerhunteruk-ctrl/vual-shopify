@@ -173,7 +173,7 @@ export async function createSubscription(
     lineItems.push({
       plan: {
         appUsagePricingDetails: {
-          terms: `Overage: $${plan.overageUsd.toFixed(2)}/credit beyond ${plan.monthlyCredits} included credits`,
+          terms: `Overage: $${(plan.overageUsd * 3).toFixed(2)}/3pt (Studio) beyond ${plan.monthlyCredits} included points`,
           cappedAmount: { amount: cappedAmount, currencyCode: "USD" },
         },
       },

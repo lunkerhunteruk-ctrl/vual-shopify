@@ -219,8 +219,8 @@ export default function BillingPage() {
   const isSubmitting = fetcher.state !== "idle";
 
   return (
-    <Page backAction={{ url: "/app" }} title="Billing & Credits">
-      <TitleBar title="Billing & Credits" />
+    <Page backAction={{ url: "/app" }} title="Billing & Points">
+      <TitleBar title="Billing & Points" />
       <BlockStack gap="500">
         {/* Current Usage Card */}
         <Layout>
@@ -243,7 +243,7 @@ export default function BillingPage() {
                 <BlockStack gap="200">
                   <InlineStack align="space-between">
                     <Text as="span" variant="bodySm">
-                      Credits used
+                      Points used
                     </Text>
                     <Text as="span" variant="bodySm" fontWeight="semibold">
                       {creditStatus.creditsUsed} / {creditStatus.monthlyCredits}
@@ -255,8 +255,7 @@ export default function BillingPage() {
                     size="small"
                   />
                   <Text as="p" variant="bodySm" tone="subdued">
-                    {creditStatus.creditsRemaining} credit
-                    {creditStatus.creditsRemaining !== 1 ? "s" : ""} remaining
+                    {creditStatus.creditsRemaining} pt remaining
                     {creditStatus.planKey === "free"
                       ? " (one-time trial)"
                       : " this billing cycle"}
@@ -266,8 +265,7 @@ export default function BillingPage() {
                 {creditStatus.overageCreditsUsed > 0 && (
                   <Banner tone="warning">
                     <Text as="p" variant="bodySm">
-                      {creditStatus.overageCreditsUsed} overage credit
-                      {creditStatus.overageCreditsUsed !== 1 ? "s" : ""} used ($
+                      {creditStatus.overageCreditsUsed} overage pt used ($
                       {(
                         creditStatus.overageCreditsUsed *
                         creditStatus.overageUsd
@@ -280,7 +278,7 @@ export default function BillingPage() {
                 {!creditStatus.canGenerate && (
                   <Banner tone="critical">
                     <Text as="p" variant="bodySm">
-                      You&apos;ve used all your credits. Upgrade your plan to
+                      You&apos;ve used all your points. Upgrade your plan to
                       continue generating looks.
                     </Text>
                   </Banner>
@@ -313,7 +311,7 @@ export default function BillingPage() {
                 </Text>
                 <Text as="p" variant="bodySm" tone="subdued">
                   Configure how the virtual try-on feature works for your
-                  customers. Each try-on costs 0.5 credits from your plan.
+                  customers. Each try-on costs 1 pt from your plan.
                 </Text>
                 <Banner tone="info">
                   <Text as="p" variant="bodySm">
@@ -399,7 +397,7 @@ export default function BillingPage() {
                         </InlineStack>
                         <Text as="p" variant="bodySm" tone="subdued">
                           ${(plan.priceUsd / plan.monthlyCredits).toFixed(2)}
-                          /credit included
+                          /pt included
                         </Text>
                       </BlockStack>
 
@@ -437,22 +435,22 @@ export default function BillingPage() {
         <Card>
           <BlockStack gap="300">
             <Text as="h3" variant="headingMd">
-              How credits work
+              How points work
             </Text>
             <Text as="p" variant="bodySm">
-              Each AI look generation uses 1 credit. This includes the model
+              Each AI Studio generation uses 3 points. This includes the model
               photography image generation and automatic AI copywriting for
               collections. Saving images to products and creating collections
-              does not cost additional credits.
+              does not cost additional points.
             </Text>
             <Text as="p" variant="bodySm">
-              Virtual Try-On uses 0.5 credits per try-on — half the cost of a
-              studio generation. This means your credits go twice as far for
+              Virtual Try-On uses 1 point per try-on — one-third the cost of a
+              Studio generation. This means your points go 3x as far for
               customer try-ons.
             </Text>
             <Text as="p" variant="bodySm">
-              Credits reset at the start of each billing cycle. Unused credits
-              do not roll over. If you exceed your monthly credits, overage
+              Points reset at the start of each billing cycle. Unused points
+              do not roll over. If you exceed your monthly points, overage
               charges apply at the rate shown in your plan.
             </Text>
           </BlockStack>

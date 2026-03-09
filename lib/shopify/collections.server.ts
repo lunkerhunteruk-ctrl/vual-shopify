@@ -33,7 +33,8 @@ export async function createCollection(
   title: string,
   productIds: string[],
   imageUrl?: string,
-  descriptionHtml?: string
+  descriptionHtml?: string,
+  modelId?: string
 ): Promise<{
   success: boolean;
   collectionId?: string;
@@ -52,6 +53,17 @@ export async function createCollection(
 
     if (descriptionHtml) {
       input.descriptionHtml = descriptionHtml;
+    }
+
+    if (modelId) {
+      input.metafields = [
+        {
+          namespace: "vual",
+          key: "model_id",
+          value: modelId,
+          type: "single_line_text_field",
+        },
+      ];
     }
 
     const response = await admin.graphql(COLLECTION_CREATE_MUTATION, {

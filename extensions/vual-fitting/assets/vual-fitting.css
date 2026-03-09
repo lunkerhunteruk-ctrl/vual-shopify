@@ -3,6 +3,14 @@
    Self-contained styles. All selectors use .vual-fitting- or .vf- prefix.
    ============================ */
 
+/* --- Root container --- */
+
+#vual-fitting-root {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+}
+
 /* --- Trigger Button --- */
 
 .vual-fitting-btn {
@@ -18,6 +26,8 @@
   letter-spacing: 0.02em;
   transition: opacity 0.15s, transform 0.1s;
   line-height: 1.4;
+  box-sizing: border-box;
+  max-width: 100%;
 }
 
 .vual-fitting-btn:hover {

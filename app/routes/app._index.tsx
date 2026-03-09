@@ -43,7 +43,7 @@ export default function Index() {
             <Card>
               <BlockStack gap="300">
                 <InlineStack align="space-between" blockAlign="center">
-                  <Text as="h2" variant="headingMd">Credits</Text>
+                  <Text as="h2" variant="headingMd">Points</Text>
                   <Badge tone={creditStatus.planKey === "free" ? "attention" : "success"}>
                     {planName}
                   </Badge>
@@ -66,7 +66,7 @@ export default function Index() {
                 {!creditStatus.canGenerate && (
                   <Banner tone="critical">
                     <Text as="p" variant="bodySm">
-                      No credits remaining. Upgrade to continue.
+                      No points remaining. Upgrade to continue.
                     </Text>
                   </Banner>
                 )}

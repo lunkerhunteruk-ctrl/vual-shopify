@@ -1,5 +1,9 @@
 /**
- * Credit Tracker — Supabase-backed credit management
+ * Credit Tracker — Supabase-backed point management (3-point system)
+ *
+ * Point costs:
+ *   Studio generation = 3 pt
+ *   Virtual Try-On    = 1 pt
  *
  * Tables used (in shared Supabase):
  *   shopify_subscriptions — tracks shop plan & billing cycle
@@ -91,7 +95,7 @@ export async function initializeFreeTrial(
       shop_domain: shopDomain,
       plan_key: "free",
       shopify_subscription_id: null,
-      monthly_credits: 5, // one-time
+      monthly_credits: 15, // one-time (3-point system)
       overage_usd: 0,
       credits_used: 0,
       daily_customer_limit: 5,
@@ -194,13 +198,13 @@ export async function getCreditStatus(
 }
 
 /**
- * Consume credits. Returns true if allowed, false if blocked.
- * @param amount — credits to consume (default 1, use 0.5 for fitting)
+ * Consume points. Returns true if allowed, false if blocked.
+ * @param amount — points to consume (default 3 for studio, use 1 for fitting)
  */
 export async function consumeCredit(
   shopDomain: string,
   description: string = "AI look generation",
-  amount: number = 1,
+  amount: number = 3,
   customerIp: string = ""
 ): Promise<{
   allowed: boolean;

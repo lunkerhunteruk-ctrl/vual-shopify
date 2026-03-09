@@ -91,7 +91,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     return json({
       success: true,
-      message: `Granted ${credits} credits to ${shopDomain} (${sub.monthly_credits} → ${newCredits})`,
+      message: `Granted ${credits} pt to ${shopDomain} (${sub.monthly_credits} → ${newCredits})`,
     });
   }
 
@@ -188,7 +188,7 @@ export default function AdminPage() {
         {/* Grant Credits */}
         <Card>
           <BlockStack gap="400">
-            <Text as="h2" variant="headingMd">Grant Credits</Text>
+            <Text as="h2" variant="headingMd">Grant Points</Text>
             <InlineStack gap="300" blockAlign="end" wrap={false}>
               <div style={{ flex: 2 }}>
                 <TextField
@@ -201,7 +201,7 @@ export default function AdminPage() {
               </div>
               <div style={{ flex: 1 }}>
                 <TextField
-                  label="Credits"
+                  label="Points"
                   type="number"
                   value={grantAmount}
                   onChange={setGrantAmount}
@@ -238,7 +238,7 @@ export default function AdminPage() {
             </InlineStack>
             <DataTable
               columnContentTypes={["text", "text", "text", "text", "text", "text"]}
-              headings={["Shop", "Plan", "Credits", "Status", "Created", "Actions"]}
+              headings={["Shop", "Plan", "Points", "Status", "Created", "Actions"]}
               rows={rows}
             />
           </BlockStack>

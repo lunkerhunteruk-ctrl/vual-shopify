@@ -21,7 +21,7 @@ import {
 } from "../../lib/ai/vertex-vton.server";
 import { addWatermark } from "../../lib/ai/watermark.server";
 
-const FITTING_CREDIT_COST = 0.5;
+const FITTING_CREDIT_COST = 1; // 1 point per try-on (3-point system)
 
 // CORS headers for storefront requests
 const corsHeaders = {
@@ -152,7 +152,7 @@ export async function action({ request }: ActionFunctionArgs) {
     );
   }
 
-  // Consume 0.5 credit per generation (regardless of garment count)
+  // Consume 1 point per generation (regardless of garment count)
   const creditResult = await consumeCredit(
     shopDomain,
     "Virtual try-on fitting",
@@ -164,7 +164,7 @@ export async function action({ request }: ActionFunctionArgs) {
       {
         success: false,
         error: "NO_CREDITS",
-        message: "No credits remaining. Please upgrade your plan.",
+        message: "No points remaining. Please upgrade your plan.",
       },
       { headers: corsHeaders }
     );

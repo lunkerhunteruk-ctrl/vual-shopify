@@ -99,7 +99,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         type: "generation",
         success: false,
         images: [],
-        error: "No credits remaining. Please upgrade your plan.",
+        error: "No points remaining. Please upgrade your plan.",
         creditExhausted: true,
       });
     }
@@ -117,7 +117,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               admin,
               usageLineItemId,
               creditResult.overageAmount,
-              `VUAL Studio overage credit`
+              `VUAL Studio overage (3 pt)`
             );
           }
         }
@@ -230,12 +230,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   if (intent === "saveToProduct") {
     const productId = formData.get("productId") as string;
     const imageBase64 = formData.get("imageBase64") as string;
+    const saveModelId = (formData.get("modelId") as string) || "";
+    const altText = saveModelId
+      ? `VUAL Studio AI Generated | Model: ${saveModelId}`
+      : "VUAL Studio AI Generated";
 
     const result = await uploadImageToProduct(
       admin,
       productId,
       imageBase64,
-      "VUAL Studio AI Generated"
+      altText
     );
 
     return json({ type: "save", ...result });
@@ -246,6 +250,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const imageBase64 = formData.get("imageBase64") as string;
     const productInfoJson = formData.get("productInfo") as string;
     const shopLocale = (formData.get("shopLocale") as string) || "en";
+    const modelId = (formData.get("modelId") as string) || undefined;
 
     // Generate AI collection title + description from product data
     const { generateCollectionCopy } = await import("../../lib/ai/gemini-copywriting.server");
@@ -264,9 +269,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
 
     // 1. Upload image to all selected products in parallel
+    const altText = modelId
+      ? `VUAL Studio AI Generated | Model: ${modelId}`
+      : "VUAL Studio AI Generated";
     const uploadResults = await Promise.all(
       productIds.map((pid) =>
-        uploadImageToProduct(admin, pid, imageBase64, "VUAL Studio AI Generated")
+        uploadImageToProduct(admin, pid, imageBase64, altText)
       )
     );
 
@@ -328,6 +336,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       productIds,
       collectionImageUrl,
       descriptionHtml,
+      modelId,
     );
 
     return json({
@@ -520,11 +529,11 @@ export default function StudioPage() {
           setLocalCredits((prev) => ({
             ...prev,
             creditsRemaining: data.creditsRemaining,
-            creditsUsed: prev.creditsUsed + 1,
+            creditsUsed: prev.creditsUsed + 3,
             canGenerate: data.creditsRemaining > 0 || prev.overageUsd > 0,
           }));
         }
-        const overageNote = data.isOverage ? " (overage credit)" : "";
+        const overageNote = data.isOverage ? " (overage)" : "";
         shopify.toast.show(`Image generated successfully!${overageNote}`);
       } else if (data.error) {
         setGenerationError(data.error);
@@ -619,9 +628,12 @@ export default function StudioPage() {
       formData.set("intent", "saveToProduct");
       formData.set("productId", productId);
       formData.set("imageBase64", base64Match[1]);
+      if (selectedModelId) {
+        formData.set("modelId", selectedModelId);
+      }
       fetcher.submit(formData, { method: "POST" });
     },
-    [fetcher]
+    [fetcher, selectedModelId]
   );
 
   const handleSaveAllAndCollection = useCallback(
@@ -642,6 +654,9 @@ export default function StudioPage() {
       formData.set("productIds", JSON.stringify(selectedProducts));
       formData.set("imageBase64", base64Match[1]);
       formData.set("productInfo", JSON.stringify(productInfo));
+      if (selectedModelId) {
+        formData.set("modelId", selectedModelId);
+      }
       fetcher.submit(formData, { method: "POST" });
     },
     [fetcher, selectedProducts, selectedProductData]
@@ -698,7 +713,7 @@ export default function StudioPage() {
   return (
     <Page
       backAction={{ url: "/app" }}
-      title="AI Studio"
+      title="Look Creation"
       subtitle="Generate professional model photography"
     >
       <BlockStack gap="500">
@@ -905,6 +920,20 @@ export default function StudioPage() {
                           }}
                         />
                       </Box>
+                      <InlineStack gap="200">
+                        <Button
+                          onClick={() => {
+                            const link = document.createElement("a");
+                            link.href = img;
+                            link.download = `vual-studio-${Date.now()}.png`;
+                            link.click();
+                          }}
+                          icon={undefined}
+                          size="slim"
+                        >
+                          Download
+                        </Button>
+                      </InlineStack>
                       {selectedProductData.length > 0 && (
                         <BlockStack gap="300">
                           <Button
@@ -1045,16 +1074,32 @@ export default function StudioPage() {
                                   transition: "all 0.15s ease",
                                 }}
                               >
-                                <img
-                                  src={model.thumbnail}
-                                  alt={`${model.ethnicity} ${model.gender} model`}
-                                  style={{
-                                    width: "100%",
-                                    aspectRatio: "3/4",
-                                    objectFit: "cover",
-                                    display: "block",
-                                  }}
-                                />
+                                <div style={{ position: "relative" }}>
+                                  <img
+                                    src={model.thumbnail}
+                                    alt={`${model.ethnicity} ${model.gender} model`}
+                                    style={{
+                                      width: "100%",
+                                      aspectRatio: "3/4",
+                                      objectFit: "cover",
+                                      display: "block",
+                                    }}
+                                  />
+                                  <div style={{
+                                    position: "absolute",
+                                    bottom: 0,
+                                    left: 0,
+                                    right: 0,
+                                    background: "rgba(0,0,0,0.6)",
+                                    color: "#fff",
+                                    fontSize: "8px",
+                                    fontFamily: "monospace",
+                                    textAlign: "center",
+                                    padding: "1px 2px",
+                                  }}>
+                                    {model.id.replace(/-[fm]-18-stand-/, "-").toUpperCase()}
+                                  </div>
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -1154,7 +1199,7 @@ export default function StudioPage() {
                   </Button>
                   <InlineStack align="center" gap="100">
                     <Text as="p" variant="bodySm" tone="subdued">
-                      {localCredits.creditsRemaining} credit{localCredits.creditsRemaining !== 1 ? "s" : ""} remaining
+                      {localCredits.creditsRemaining} pt remaining
                     </Text>
                     <Text as="span" variant="bodySm" tone="subdued">•</Text>
                     <Button url="/app/billing" variant="plain" size="slim">
