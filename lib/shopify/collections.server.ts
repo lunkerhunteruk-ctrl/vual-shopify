@@ -21,6 +21,28 @@ const COLLECTION_CREATE_MUTATION = `
   }
 `;
 
+const PUBLISH_MUTATION = `
+  mutation publishablePublish($id: ID!, $input: [PublicationInput!]!) {
+    publishablePublish(id: $id, input: $input) {
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`;
+
+const PUBLICATIONS_QUERY = `
+  query publications {
+    publications(first: 20) {
+      nodes {
+        id
+        name
+      }
+    }
+  }
+`;
+
 /**
  * Create a Shopify Custom Collection from an AI-generated look
  * @param admin - Authenticated Shopify Admin API context
@@ -81,15 +103,52 @@ export async function createCollection(
     }
 
     const collection = data.data?.collectionCreate?.collection;
+    if (!collection?.id) {
+      return { success: false, error: "Collection created but no ID returned" };
+    }
+
+    // Publish to Online Store so it appears in theme editor
+    await publishToOnlineStore(admin, collection.id);
+
     return {
       success: true,
-      collectionId: collection?.id,
-      handle: collection?.handle,
+      collectionId: collection.id,
+      handle: collection.handle,
     };
   } catch (error) {
     return {
       success: false,
       error: error instanceof Error ? error.message : "Collection creation failed",
     };
+  }
+}
+
+/**
+ * Publish a resource to the Online Store sales channel
+ */
+async function publishToOnlineStore(
+  admin: AdminApiContext,
+  resourceId: string
+): Promise<void> {
+  try {
+    // Find the Online Store publication
+    const pubResponse = await admin.graphql(PUBLICATIONS_QUERY);
+    const pubData = await pubResponse.json();
+    const publications = pubData.data?.publications?.nodes || [];
+    const onlineStore = publications.find(
+      (p: any) => p.name === "Online Store"
+    );
+
+    if (!onlineStore) return;
+
+    await admin.graphql(PUBLISH_MUTATION, {
+      variables: {
+        id: resourceId,
+        input: [{ publicationId: onlineStore.id }],
+      },
+    });
+  } catch {
+    // Non-critical — collection still exists, just not published
+    console.error("Failed to publish collection to Online Store");
   }
 }

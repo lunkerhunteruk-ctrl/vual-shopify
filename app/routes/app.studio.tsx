@@ -339,6 +339,20 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       modelId,
     );
 
+    // 4. Add "vual-tryon" tag to all products so the fitting button appears
+    await Promise.all(
+      productIds.map((pid) =>
+        admin.graphql(
+          `mutation tagsAdd($id: ID!, $tags: [String!]!) {
+            tagsAdd(id: $id, tags: $tags) {
+              userErrors { field message }
+            }
+          }`,
+          { variables: { id: pid, tags: ["vual-tryon"] } }
+        ).catch((e) => console.error(`Failed to tag ${pid}:`, e))
+      )
+    );
+
     return json({
       type: "saveAll",
       uploadCount: uploadResults.filter((r) => r.success).length,
