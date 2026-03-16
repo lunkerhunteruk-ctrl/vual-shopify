@@ -49,7 +49,7 @@
     "@shopify/app": "^3.58.2",
     "@shopify/cli": "^3.91.0",
     "@types/eslint": "^9.6.1",
-    "@types/node": "^22.2.0",
+    "@types/node": "^25.3.3",
     "@types/react": "^18.2.31",
     "@types/react-dom": "^18.2.14",
     "eslint": "^8.42.0",
