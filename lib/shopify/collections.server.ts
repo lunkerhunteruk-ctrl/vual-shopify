@@ -135,11 +135,15 @@ async function publishToOnlineStore(
     const pubResponse = await admin.graphql(PUBLICATIONS_QUERY);
     const pubData = await pubResponse.json();
     const publications = pubData.data?.publications?.nodes || [];
+    console.log("Available publications:", publications.map((p: any) => p.name));
     const onlineStore = publications.find(
-      (p: any) => p.name === "Online Store"
+      (p: any) => p.name.toLowerCase().includes("online store")
     );
 
-    if (!onlineStore) return;
+    if (!onlineStore) {
+      console.warn("Online Store publication not found. Available:", publications.map((p: any) => p.name));
+      return;
+    }
 
     await admin.graphql(PUBLISH_MUTATION, {
       variables: {

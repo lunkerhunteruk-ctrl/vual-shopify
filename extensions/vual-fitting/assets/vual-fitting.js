@@ -52,7 +52,7 @@
         "Take or upload a close-up photo of your wrist to see how this bracelet looks.",
       tips: [
         "Stand facing the camera",
-        "Show your full body",
+        "Show your upper body",
         "Use a plain background",
         "Good lighting helps",
       ],
@@ -117,7 +117,7 @@
         "手首のクローズアップ写真を撮影またはアップロードして、ブレスレットの着用イメージをご確認ください。",
       tips: [
         "正面を向いて立ってください",
-        "全身が写るようにしてください",
+        "上半身が写るようにしてください",
         "シンプルな背景がベストです",
         "明るい場所で撮影してください",
       ],
@@ -617,9 +617,6 @@
     var ms = state.modelSettings;
     var modelSettingsHTML =
       '<div class="vf-model-settings">' +
-      '<div class="vf-model-settings__label">' +
-      escapeHTML(t("modelSettingsLabel")) +
-      "</div>" +
       '<div class="vf-model-settings__row">' +
       // Gender toggle
       '<div class="vf-model-settings__field">' +
@@ -1102,7 +1099,36 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ items: cartItems }),
     })
+      .then(function (res) { return res.json(); })
       .then(function () {
+        // Update cart count in theme header
+        fetch("/cart.js")
+          .then(function (r) { return r.json(); })
+          .then(function (cart) {
+            // Update common cart count selectors
+            var selectors = [
+              ".cart-count",
+              ".cart-count-bubble span",
+              "[data-cart-count]",
+              ".cart-item-count",
+              "#cart-icon-bubble span",
+              ".header__cart-count",
+            ];
+            for (var s = 0; s < selectors.length; s++) {
+              var els = document.querySelectorAll(selectors[s]);
+              for (var e = 0; e < els.length; e++) {
+                els[e].textContent = cart.item_count;
+              }
+            }
+            // Dispatch Shopify Section Rendering API event
+            document.documentElement.dispatchEvent(
+              new CustomEvent("cart:refresh")
+            );
+            // Shopify theme 2.0 section rendering
+            if (window.Shopify && window.Shopify.theme) {
+              document.dispatchEvent(new Event("cart:updated"));
+            }
+          });
         setTimeout(function () {
           closeModal();
         }, 1200);
@@ -1235,6 +1261,15 @@
   }
 
   function initButton() {
+    // Match width of theme's buy buttons
+    var buyBtn = document.querySelector('.shopify-payment-button, .product-form__submit, button[name="add"], .product-form__buttons');
+    if (buyBtn) {
+      var btnWidth = buyBtn.offsetWidth;
+      if (btnWidth > 0) {
+        state.root.style.maxWidth = btnWidth + "px";
+      }
+    }
+
     var manualCategory = state.root.dataset.category || "";
     var productType = state.root.dataset.productType || "";
     var currentProduct = {

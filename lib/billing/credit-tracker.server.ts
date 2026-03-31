@@ -95,7 +95,7 @@ export async function initializeFreeTrial(
       shop_domain: shopDomain,
       plan_key: "free",
       shopify_subscription_id: null,
-      monthly_credits: 15, // one-time (3-point system)
+      monthly_credits: 12, // one-time free credits (3 looks + 3 VTON)
       overage_usd: 0,
       credits_used: 0,
       daily_customer_limit: 5,

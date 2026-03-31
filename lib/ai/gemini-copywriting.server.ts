@@ -65,7 +65,7 @@ export async function generateCollectionCopy(
 
   const prompt = `You are a luxury fashion copywriter. Given the following products that form a coordinated look/collection${imageContext}, generate:
 
-1. A short, evocative TITLE (max 60 characters) — creative, memorable, not generic. No quotes around it.
+1. A short, evocative TITLE (max 60 characters) — creative, memorable, not generic. No quotes around it. IMPORTANT: Vary your vocabulary — avoid overused fashion words like "effortless", "ethereal", "elevated", "curated", "timeless". Be original.
 2. A DESCRIPTION (2-4 sentences) — emotional, editorial-style copy that paints a mood and lifestyle, weaving in the products naturally. Make it feel like a fashion magazine editorial caption.
 
 Products:

@@ -45,6 +45,9 @@ export interface GenerationRequest {
   garmentSize?: GarmentSize;
   garmentSizeSpecs?: SizeSpec;
   locale?: string;
+  // Styling options
+  tuckStyle?: "auto" | "tuck-out" | "tuck-in" | "french-tuck";
+  outerStyle?: "auto" | "open" | "closed";
   // Jewelry mode
   jewelryCategory?: JewelryCategory;
 }
@@ -154,6 +157,32 @@ async function callGeminiAPI(
 
 // --- Prompt builders ---
 
+function getTuckInstruction(style?: string): string {
+  if (!style || style === "auto") return "";
+  switch (style) {
+    case "tuck-in":
+      return "MANDATORY STYLING RULE (INNER LAYER ONLY — applies to shirts, tops, blouses, NOT to jackets or coats): The top/shirt MUST be fully TUCKED IN to the pants/skirt. The entire hem — front, sides, and back — must be neatly inserted inside the waistband. No part of the hem should be visible outside.";
+    case "tuck-out":
+      return "MANDATORY STYLING RULE (INNER LAYER ONLY — applies to shirts, tops, blouses, NOT to jackets or coats): The top/shirt MUST be worn UNTUCKED — the hem hangs freely OUTSIDE the pants/skirt. Do NOT tuck any part of the hem into the waistband.";
+    case "french-tuck":
+      return "MANDATORY STYLING RULE (INNER LAYER ONLY — applies to shirts, tops, blouses, NOT to jackets or coats): The top/shirt MUST be styled with a FRENCH TUCK — only the front-center portion of the hem is casually tucked into the waistband, while the sides and back hang freely outside. This creates an effortless, slightly asymmetric drape.";
+    default:
+      return "";
+  }
+}
+
+function getOuterInstruction(style?: string): string {
+  if (!style || style === "auto") return "";
+  switch (style) {
+    case "open":
+      return "MANDATORY STYLING RULE: The jacket/coat/outer garment MUST be worn OPEN and UNBUTTONED/UNZIPPED. The front panels should hang apart, revealing the inner top/shirt underneath.";
+    case "closed":
+      return "MANDATORY STYLING RULE: The jacket/coat/outer garment MUST be worn CLOSED — fully buttoned, zipped, or fastened. The front panels should be together with no inner garment visible at the front.";
+    default:
+      return "";
+  }
+}
+
 function buildPrompt(req: GenerationRequest, counts: number[]): string {
   const { modelSettings, modelImage, garmentSize, garmentSizeSpecs, background, customPrompt, locale } = req;
 
@@ -245,9 +274,11 @@ function buildPrompt(req: GenerationRequest, counts: number[]): string {
     customPrompt
       ? `MANDATORY STYLING (DO NOT IGNORE): ${customPrompt}.`
       : "",
+    getTuckInstruction(req.tuckStyle),
+    getOuterInstruction(req.outerStyle),
     sizeDescription,
     fitDescription ? `The garment appears with ${fitDescription}.` : "",
-    `${backgroundDescriptions[background] || background}.`,
+    background !== "custom" ? `${backgroundDescriptions[background] || background}.` : "",
     `Sharp focus, editorial fashion magazine quality, ultra high resolution 8K.`,
     `Extremely detailed, photorealistic rendering with fine texture details.`,
     `Realistic skin texture, natural pose, professional model.`,
@@ -255,7 +286,7 @@ function buildPrompt(req: GenerationRequest, counts: number[]): string {
     `CRITICAL: DO NOT render any text, labels, watermarks, or words on the image.`,
     `CRITICAL: Generate EXACTLY ONE single model in ONE single pose. Do NOT create multiple copies, split views, collages, triptychs, or side-by-side variations of the model. The output must be ONE continuous photograph with ONE person.`,
     `OUTPUT FORMAT: Generate the image in ${req.aspectRatio} aspect ratio.`,
-    req.aspectRatio === "16:9"
+    req.aspectRatio === "16:9" && !background.startsWith("studio")
       ? `CINEMATIC 16:9 COMPOSITION: Use the wide frame to showcase the environment and location beautifully. Compose like a cinematic film still — the model placed naturally within a grand, expansive scene. Maximize the beauty of the background landscape and setting. Let the environment breathe and tell a story alongside the fashion.`
       : "",
     `REMINDER: The garments MUST be exact copies from the reference images.`,
@@ -274,8 +305,12 @@ function buildSimplifiedPrompt(req: GenerationRequest): string {
     ? "the model from the reference image"
     : ethnicity ? `a ${ethnicity} ${gender}` : `a ${gender}`;
   const styleNote = customPrompt ? ` IMPORTANT STYLING: ${customPrompt}.` : "";
-  const wideNote = req.aspectRatio === "16:9" ? " Cinematic wide composition — showcase the environment beautifully, model placed naturally within an expansive scene like a film still." : "";
-  return `E-commerce fashion photography: ${model}, ${modelSettings.height}cm tall, ${poseDescriptions[modelSettings.pose] || modelSettings.pose}, wearing the garment(s) from the provided reference images.${styleNote} ${backgroundDescriptions[background] || background}. ${req.aspectRatio} aspect ratio. Full body shot, professional quality, no text or watermarks. IMPORTANT: Generate exactly ONE single model in ONE pose — no collages, split views, or multiple copies.${wideNote}`;
+  const tuckNote = getTuckInstruction(req.tuckStyle);
+  const outerNote = getOuterInstruction(req.outerStyle);
+  const stylingNotes = [tuckNote, outerNote].filter(Boolean).join(" ");
+  const wideNote = req.aspectRatio === "16:9" && !background.startsWith("studio") ? " Cinematic wide composition — showcase the environment beautifully, model placed naturally within an expansive scene like a film still." : "";
+  const bgNote = background !== "custom" ? ` ${backgroundDescriptions[background] || background}.` : "";
+  return `E-commerce fashion photography: ${model}, ${modelSettings.height}cm tall, ${poseDescriptions[modelSettings.pose] || modelSettings.pose}, wearing the garment(s) from the provided reference images.${styleNote}${stylingNotes ? ` ${stylingNotes}` : ""}${bgNote} ${req.aspectRatio} aspect ratio. Full body shot, professional quality, no text or watermarks. IMPORTANT: Generate exactly ONE single model in ONE pose — no collages, split views, or multiple copies.${wideNote}`;
 }
 
 function buildMinimalPrompt(req: GenerationRequest): string {
@@ -283,8 +318,11 @@ function buildMinimalPrompt(req: GenerationRequest): string {
   const gender = modelSettings.gender === "female" ? "woman" : "man";
   const model = modelImage ? "this person" : `a ${gender}`;
   const styleNote = customPrompt ? ` ${customPrompt}.` : "";
-  const wideNote = req.aspectRatio === "16:9" ? " Cinematic wide shot — grand environment, model within an expansive beautiful scene." : "";
-  return `Fashion catalog photo: ${model} wearing the garment(s) from the reference images.${styleNote} ${backgroundDescriptions[background] || "White background"}. ${req.aspectRatio} aspect ratio. Full body, clean photo. ONE single model only, no collages or split views.${wideNote}`;
+  const tuckNote = req.tuckStyle && req.tuckStyle !== "auto" ? ` ${getTuckInstruction(req.tuckStyle)}` : "";
+  const outerNote = req.outerStyle && req.outerStyle !== "auto" ? ` ${getOuterInstruction(req.outerStyle)}` : "";
+  const wideNote = req.aspectRatio === "16:9" && !background.startsWith("studio") ? " Cinematic wide shot — grand environment, model within an expansive beautiful scene." : "";
+  const bgNote = background !== "custom" ? ` ${backgroundDescriptions[background] || "White background"}.` : "";
+  return `Fashion catalog photo: ${model} wearing the garment(s) from the reference images.${styleNote}${tuckNote}${outerNote}${bgNote} ${req.aspectRatio} aspect ratio. Full body, clean photo. ONE single model only, no collages or split views.${wideNote}`;
 }
 
 // --- Jewelry prompt builders ---

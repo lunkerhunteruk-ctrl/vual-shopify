@@ -135,6 +135,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const background = formData.get("background") as string;
     const aspectRatio = formData.get("aspectRatio") as string;
     const customPrompt = (formData.get("customPrompt") as string) || undefined;
+    const tuckStyle = (formData.get("tuckStyle") as string) || undefined;
+    const outerStyle = (formData.get("outerStyle") as string) || undefined;
     const modelImagePath = (formData.get("modelImage") as string) || undefined;
     const referenceImageUrls = formData.get("referenceImages")
       ? JSON.parse(formData.get("referenceImages") as string) as string[]
@@ -215,6 +217,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       background,
       aspectRatio: jewelryCategory ? (aspectRatio || "1:1") : aspectRatio,
       customPrompt: finalPrompt,
+      tuckStyle: tuckStyle as any,
+      outerStyle: outerStyle as any,
       modelImage,
       jewelryCategory: jewelryCategory as any,
     });
@@ -381,6 +385,7 @@ const backgroundOptions = [
   { label: "Outdoor Nature", value: "outdoorNature" },
   { label: "Cafe Indoor", value: "cafeIndoor" },
   { label: "Beach Resort", value: "beachResort" },
+  { label: "Custom (use prompt)", value: "custom" },
 ];
 
 const jewelryBackgroundOptions = [
@@ -454,17 +459,37 @@ export default function StudioPage() {
     }
   }, [vendors, vendorFilter]);
 
-  // Filter products by category and vendor
+  // Search query
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Filter products by category, vendor, and search query
   const filteredProducts = useMemo(() => {
-    if (vendorFilter === "all") return categoryFilteredProducts;
-    return categoryFilteredProducts.filter((p) => p.vendor === vendorFilter);
-  }, [categoryFilteredProducts, vendorFilter]);
+    let filtered = vendorFilter === "all" ? categoryFilteredProducts : categoryFilteredProducts.filter((p) => p.vendor === vendorFilter);
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      filtered = filtered.filter((p) =>
+        p.title.toLowerCase().includes(q) ||
+        (p.productType || "").toLowerCase().includes(q) ||
+        (p.vendor || "").toLowerCase().includes(q)
+      );
+    }
+    return [...filtered].sort((a, b) => {
+      const typeA = (a.productType || "").toLowerCase().trim();
+      const typeB = (b.productType || "").toLowerCase().trim();
+      // Empty productType goes to the end
+      if (!typeA && typeB) return 1;
+      if (typeA && !typeB) return -1;
+      if (typeA !== typeB) return typeA.localeCompare(typeB);
+      return a.title.localeCompare(b.title);
+    });
+  }, [categoryFilteredProducts, vendorFilter, searchQuery]);
 
   // Model selection
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
+  const [hoveredModelId, setHoveredModelId] = useState<string | null>(null);
   const [gender, setGender] = useState("female");
   const [ethnicity, setEthnicity] = useState("japanese");
-  const [height, setHeight] = useState(165);
+  const [height, setHeight] = useState(175);
   const [pose, setPose] = useState("standing");
 
   // Jewelry mode
@@ -476,8 +501,13 @@ export default function StudioPage() {
   const [aspectRatio, setAspectRatio] = useState("3:4");
   const [customPrompt, setCustomPrompt] = useState("");
 
+  // Styling options
+  const [tuckStyle, setTuckStyle] = useState("auto");
+  const [outerStyle, setOuterStyle] = useState("auto");
+
   // Generation state
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
+  const [showResultModal, setShowResultModal] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const lastFetcherDataRef = useRef<any>(null);
 
@@ -538,6 +568,7 @@ export default function StudioPage() {
       if (data.success && data.images?.length > 0) {
         setGeneratedImages(data.images);
         setGenerationError(null);
+        setShowResultModal(true);
         // Update local credit count
         if (data.creditsRemaining !== undefined) {
           setLocalCredits((prev) => ({
@@ -608,6 +639,8 @@ export default function StudioPage() {
     formData.set("background", background);
     formData.set("aspectRatio", aspectRatio);
     if (customPrompt) formData.set("customPrompt", customPrompt);
+    if (tuckStyle !== "auto") formData.set("tuckStyle", tuckStyle);
+    if (outerStyle !== "auto") formData.set("outerStyle", outerStyle);
     if (jewelryCategory) formData.set("jewelryCategory", jewelryCategory);
 
     // If a model/base photo is selected, convert to data URL on server
@@ -628,6 +661,8 @@ export default function StudioPage() {
     background,
     aspectRatio,
     customPrompt,
+    tuckStyle,
+    outerStyle,
     jewelryCategory,
     selectedModel,
     fetcher,
@@ -791,7 +826,64 @@ export default function StudioPage() {
                     ))}
                   </InlineStack>
                 )}
+
+                <TextField
+                  label=""
+                  value={searchQuery}
+                  onChange={setSearchQuery}
+                  placeholder="Search products..."
+                  clearButton
+                  onClearButtonClick={() => setSearchQuery("")}
+                  autoComplete="off"
+                />
+
+                {selectedProducts.length > 0 && (
+                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+                    {selectedProducts.map((pid) => {
+                      const p = products.find((pr) => pr.id === pid);
+                      if (!p) return null;
+                      const imgUrl = p.featuredImage?.url || p.images[0]?.url;
+                      return (
+                        <div
+                          key={pid}
+                          onClick={() => toggleProduct(pid)}
+                          style={{
+                            position: "relative",
+                            width: "52px",
+                            height: "52px",
+                            borderRadius: "8px",
+                            overflow: "hidden",
+                            border: "2px solid #2C6ECB",
+                            cursor: "pointer",
+                            flexShrink: 0,
+                          }}
+                          title={p.title}
+                        >
+                          {imgUrl && (
+                            <img src={imgUrl} alt={p.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                          )}
+                          <div style={{
+                            position: "absolute",
+                            top: "-1px",
+                            right: "-1px",
+                            background: "#2C6ECB",
+                            color: "#fff",
+                            borderRadius: "0 0 0 6px",
+                            fontSize: "9px",
+                            lineHeight: 1,
+                            padding: "2px 4px",
+                          }}>✕</div>
+                        </div>
+                      );
+                    })}
+                    <Text as="span" variant="bodySm" tone="subdued">
+                      {selectedProducts.length} selected
+                    </Text>
+                  </div>
+                )}
+
                 <Divider />
+                <div style={{ maxHeight: "800px", overflowY: "auto" }}>
                 <ResourceList
                   resourceName={{ singular: "product", plural: "products" }}
                   items={filteredProducts}
@@ -824,8 +916,8 @@ export default function StudioPage() {
                               </Text>
                             )}
                             <Text as="span" variant="bodySm" tone="subdued">
-                              {product.images.length} image
-                              {product.images.length !== 1 ? "s" : ""} |{" "}
+                              {product.images.filter((img: any) => !img.altText?.startsWith("VUAL Studio AI Generated")).length} image
+                              {product.images.filter((img: any) => !img.altText?.startsWith("VUAL Studio AI Generated")).length !== 1 ? "s" : ""} |{" "}
                               {product.variants.length} variant
                               {product.variants.length !== 1 ? "s" : ""}
                             </Text>
@@ -833,7 +925,7 @@ export default function StudioPage() {
                           {isSelected && <Badge tone="success">Selected</Badge>}
                         </InlineStack>
                         {/* Expanded image gallery for selected products (exclude AI-generated images) */}
-                        {isSelected && product.images.filter((img) => img.altText !== "VUAL Studio AI Generated").length > 1 && (
+                        {isSelected && product.images.filter((img) => !img.altText?.startsWith("VUAL Studio AI Generated")).length > 1 && (
                           <div
                             style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid #e1e3e5" }}
                             onClick={(e) => e.stopPropagation()}
@@ -849,7 +941,7 @@ export default function StudioPage() {
                                 flexWrap: "wrap",
                               }}
                             >
-                              {product.images.filter((img) => img.altText !== "VUAL Studio AI Generated").map((img) => {
+                              {product.images.filter((img) => !img.altText?.startsWith("VUAL Studio AI Generated")).map((img) => {
                                 const isImgSelected = productSelectedImages.includes(img.url);
                                 return (
                                   <div
@@ -906,79 +998,49 @@ export default function StudioPage() {
                     </Button>
                   </InlineStack>
                 )}
+                </div>
               </BlockStack>
             </Card>
 
-            {/* Generated Images */}
-            {generatedImages.length > 0 && (
-              <Card>
-                <BlockStack gap="400">
-                  <Text as="h2" variant="headingMd">
-                    Generated Images
-                  </Text>
-                  {generatedImages.map((img, i) => (
-                    <BlockStack gap="300" key={i}>
-                      <Box
-                        borderRadius="200"
-                        borderWidth="025"
-                        borderColor="border"
-                        padding="200"
-                      >
-                        <img
-                          src={img}
-                          alt={`Generated look ${i + 1}`}
-                          style={{
-                            width: "100%",
-                            borderRadius: "8px",
-                            display: "block",
-                          }}
-                        />
-                      </Box>
-                      <InlineStack gap="200">
-                        <Button
-                          onClick={() => {
-                            const link = document.createElement("a");
-                            link.href = img;
-                            link.download = `vual-studio-${Date.now()}.png`;
-                            link.click();
-                          }}
-                          icon={undefined}
-                          size="slim"
-                        >
-                          Download
-                        </Button>
-                      </InlineStack>
-                      {selectedProductData.length > 0 && (
-                        <BlockStack gap="300">
-                          <Button
-                            variant="primary"
-                            fullWidth
-                            onClick={() => handleSaveAllAndCollection(img)}
-                            loading={
-                              fetcher.state !== "idle" &&
-                              fetcher.formData?.get("intent") === "saveAllAndCollection"
-                            }
-                          >
-                            Save to All Products + Create Collection
+            {/* Generated Images Modal */}
+            {showResultModal && generatedImages.length > 0 && (
+              <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)" }} onClick={() => setShowResultModal(false)} />
+                <div style={{ position: "relative", background: "#fff", borderRadius: "16px", maxWidth: "720px", width: "90vw", maxHeight: "90vh", overflow: "hidden", padding: "24px", display: "flex", flexDirection: "column" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                    <Text as="h2" variant="headingMd">Generated Look</Text>
+                    <button onClick={() => setShowResultModal(false)} style={{ background: "none", border: "none", fontSize: "24px", cursor: "pointer", color: "#666", padding: "4px 8px" }}>&times;</button>
+                  </div>
+                  <BlockStack gap="400">
+                    {generatedImages.map((img, i) => (
+                      <BlockStack gap="300" key={i}>
+                        <Box borderRadius="200" borderWidth="025" borderColor="border" padding="200">
+                          <img src={img} alt={`Generated look ${i + 1}`} style={{ width: "100%", maxHeight: "calc(90vh - 220px)", objectFit: "contain", borderRadius: "8px", display: "block" }} />
+                        </Box>
+                        <InlineStack gap="200">
+                          <Button onClick={() => { const ext = img.startsWith("data:image/jpeg") ? "jpg" : "png"; fetch(img).then(r => r.blob()).then(blob => { const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `vual-studio-${Date.now()}.${ext}`; link.click(); URL.revokeObjectURL(url); }); }} size="slim">
+                            Download
                           </Button>
-                          <InlineStack gap="200" wrap>
-                            {selectedProductData.map((p) => (
-                              <Button
-                                key={p.id}
-                                onClick={() => handleSaveToProduct(img, p.id)}
-                                loading={isSaving}
-                                size="slim"
-                              >
-                                Save to {p.title}
-                              </Button>
-                            ))}
-                          </InlineStack>
-                        </BlockStack>
-                      )}
-                    </BlockStack>
-                  ))}
-                </BlockStack>
-              </Card>
+                        </InlineStack>
+                        {selectedProductData.length > 0 && (
+                          <BlockStack gap="300">
+                            <Button variant="primary" fullWidth onClick={() => handleSaveAllAndCollection(img)} loading={fetcher.state !== "idle" && fetcher.formData?.get("intent") === "saveAllAndCollection"}>
+                              Save to All Products + Create Collection
+                            </Button>
+                            <InlineStack gap="200" wrap>
+                              {selectedProductData.map((p) => (
+                                <Button key={p.id} onClick={() => handleSaveToProduct(img, p.id)} loading={isSaving} size="slim">
+                                  Save to {p.title}
+                                </Button>
+                              ))}
+                            </InlineStack>
+                          </BlockStack>
+                        )}
+                      </BlockStack>
+                    ))}
+                  </BlockStack>
+                </div>
+              </div>
             )}
           </Layout.Section>
 
@@ -1058,6 +1120,7 @@ export default function StudioPage() {
                           <Text as="p" variant="bodySm" tone="subdued">
                             Click to select a model
                           </Text>
+                          <div style={{ maxHeight: "400px", overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
                           <div
                             style={{
                               display: "grid",
@@ -1073,6 +1136,8 @@ export default function StudioPage() {
                                     selectedModelId === model.id ? null : model.id
                                   )
                                 }
+                                onMouseEnter={() => setHoveredModelId(model.id)}
+                                onMouseLeave={() => setHoveredModelId(null)}
                                 style={{
                                   cursor: "pointer",
                                   borderRadius: "8px",
@@ -1099,6 +1164,23 @@ export default function StudioPage() {
                                       display: "block",
                                     }}
                                   />
+                                  {hoveredModelId === model.id && (
+                                    <img
+                                      src={model.fullImage || model.thumbnail}
+                                      alt="Face detail"
+                                      style={{
+                                        position: "absolute",
+                                        inset: 0,
+                                        width: "100%",
+                                        height: "100%",
+                                        objectFit: "cover",
+                                        objectPosition: "center 10%",
+                                        transform: "scale(2.8)",
+                                        transformOrigin: "center 10%",
+                                        pointerEvents: "none",
+                                      }}
+                                    />
+                                  )}
                                   <div style={{
                                     position: "absolute",
                                     bottom: 0,
@@ -1116,6 +1198,7 @@ export default function StudioPage() {
                                 </div>
                               </div>
                             ))}
+                          </div>
                           </div>
                           {selectedModel && (
                             <Banner tone="info">
@@ -1155,6 +1238,38 @@ export default function StudioPage() {
                 </BlockStack>
               </Card>
 
+              {/* Styling Options */}
+              {!isJewelryMode && (
+              <Card>
+                <BlockStack gap="400">
+                  <Text as="h2" variant="headingMd">
+                    Styling
+                  </Text>
+                  <Select
+                    label="Tops Hem"
+                    options={[
+                      { label: "Auto", value: "auto" },
+                      { label: "Tucked In", value: "tuck-in" },
+                      { label: "Untucked", value: "tuck-out" },
+                      { label: "French Tuck", value: "french-tuck" },
+                    ]}
+                    value={tuckStyle}
+                    onChange={setTuckStyle}
+                  />
+                  <Select
+                    label="Outer Layer"
+                    options={[
+                      { label: "Auto", value: "auto" },
+                      { label: "Open", value: "open" },
+                      { label: "Closed", value: "closed" },
+                    ]}
+                    value={outerStyle}
+                    onChange={setOuterStyle}
+                  />
+                </BlockStack>
+              </Card>
+              )}
+
               {/* Scene Settings */}
               <Card>
                 <BlockStack gap="400">
@@ -1178,6 +1293,8 @@ export default function StudioPage() {
                     value={customPrompt}
                     onChange={setCustomPrompt}
                     multiline={3}
+                    maxLength={500}
+                    showCharacterCount
                     placeholder="e.g., casual street style, holding a coffee cup"
                     autoComplete="off"
                   />

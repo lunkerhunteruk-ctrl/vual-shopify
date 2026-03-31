@@ -4,7 +4,7 @@
   Renders a "Try On" button that opens a modal for virtual try-on.
 {% endcomment %}
 
-{% if product and product.tags contains 'vual-tryon' %}
+{% if product %}
 <div id="vual-fitting-root"
      data-product-title="{{ product.title | escape }}"
      data-product-image="{{ product.featured_image | image_url: width: 1024 }}"
