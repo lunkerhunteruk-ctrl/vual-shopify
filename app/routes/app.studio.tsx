@@ -511,6 +511,9 @@ export default function StudioPage() {
   const [generationError, setGenerationError] = useState<string | null>(null);
   const lastFetcherDataRef = useRef<any>(null);
 
+  // Review prompt state
+  const [showReviewBanner, setShowReviewBanner] = useState(false);
+
   const isGenerating =
     fetcher.state !== "idle" &&
     fetcher.formData?.get("intent") === "generate";
@@ -580,6 +583,16 @@ export default function StudioPage() {
         }
         const overageNote = data.isOverage ? " (overage)" : "";
         shopify.toast.show(`Image generated successfully!${overageNote}`);
+        // Track generation count for review prompt
+        try {
+          const count = parseInt(localStorage.getItem("vual_gen_count") || "0", 10) + 1;
+          localStorage.setItem("vual_gen_count", String(count));
+          const dismissed = localStorage.getItem("vual_review_dismissed");
+          if (count >= 3 && !dismissed) {
+            setShowReviewBanner(true);
+          }
+        } catch {}
+
       } else if (data.error) {
         setGenerationError(data.error);
       }
@@ -1011,6 +1024,25 @@ export default function StudioPage() {
                     <Text as="h2" variant="headingMd">Generated Look</Text>
                     <button onClick={() => setShowResultModal(false)} style={{ background: "none", border: "none", fontSize: "24px", cursor: "pointer", color: "#666", padding: "4px 8px" }}>&times;</button>
                   </div>
+                  {showReviewBanner && (
+                    <div style={{ marginBottom: "16px" }}>
+                      <Banner
+                        title="Enjoying VUAL Studio?"
+                        tone="success"
+                        onDismiss={() => {
+                          setShowReviewBanner(false);
+                          try { localStorage.setItem("vual_review_dismissed", "1"); } catch {}
+                        }}
+                        action={{
+                          content: "Leave a Review ★",
+                          url: "https://apps.shopify.com/vual-studio#modal-show=WriteReviewModal",
+                          external: true,
+                        }}
+                      >
+                        <p>A quick review helps other store owners discover VUAL. Thank you!</p>
+                      </Banner>
+                    </div>
+                  )}
                   <BlockStack gap="400">
                     {generatedImages.map((img, i) => (
                       <BlockStack gap="300" key={i}>
