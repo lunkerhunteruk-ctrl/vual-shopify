@@ -27,7 +27,7 @@ import { fetchProducts } from "../../lib/shopify/products.server";
 import { generateImage } from "../../lib/ai/gemini-image.server";
 import { uploadImageToProduct } from "../../lib/shopify/images.server";
 import { getCreditStatus, consumeCredit } from "../../lib/billing/credit-tracker.server";
-import type { FilterId } from "../../lib/photo-filters";
+import type { FilterId } from "../lib/photo-filters";
 const FILTERS: { id: FilterId; label: string }[] = [
   { id: "none", label: "Original" },
   { id: "natural", label: "Natural" },
@@ -1083,7 +1083,7 @@ export default function StudioPage() {
                                   if (filteredImages[cacheKey]) return;
                                   setFilterProcessing(true);
                                   try {
-                                    const { applyFilter } = await import("../../lib/photo-filters");
+                                    const { applyFilter } = await import("../lib/photo-filters");
                                     const result = await applyFilter(img, f.id);
                                     setFilteredImages((prev) => ({ ...prev, [cacheKey]: result }));
                                   } catch (err) {
