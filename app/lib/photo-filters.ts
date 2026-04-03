@@ -352,36 +352,77 @@ function fitDimensions(w: number, h: number, maxDim: number): { w: number; h: nu
 // ─── Polaroid filter ───────────────────────────────────────
 
 /**
- * Polaroid: warm amber tone, low contrast, lifted shadows, highlight blowout.
- * Inspired by Polaroid 600 / SX-70 film characteristics.
+ * Polaroid: cross-processed look — cool shadows (teal/blue), warm highlights (cream).
+ * Crushed midtones, partial desaturation with orange/yellow retention.
+ * Inspired by Polaroid SX-70 / Spectra film + YSL campaign aesthetic.
  */
 function applyPolaroid(data: ImageData) {
+  // S-curve LUT for midtone crushing: shadows lifted, highlights compressed, mids steep
+  const sCurve = buildToneCurveLUT([
+    [0, 0.08],     // blacks lifted to ~8%
+    [0.15, 0.12],  // deep shadows barely move
+    [0.35, 0.30],  // lower-mids compressed
+    [0.50, 0.52],  // midpoint slightly above
+    [0.65, 0.75],  // upper-mids stretched (steep = crushed feel)
+    [0.85, 0.92],  // highlights compressed
+    [1.0, 0.97],   // whites never pure white (cream ceiling)
+  ]);
+
   const d = data.data;
   for (let i = 0; i < d.length; i += 4) {
-    // Low contrast, lifted brightness
-    let { r, g, b } = adjustBCS(d[i] / 255, d[i + 1] / 255, d[i + 2] / 255, 0.10, 0.92, 0.90);
+    let { r, g, b } = adjustBCS(d[i] / 255, d[i + 1] / 255, d[i + 2] / 255, 0.04, 1.10, 0.78);
 
-    // Lift shadows (blacks never go fully dark)
-    r = r * 0.88 + 0.12;
-    g = g * 0.88 + 0.12;
-    b = b * 0.88 + 0.12;
+    // S-curve per channel
+    r = sCurve[clamp8(r * 255)] / 255;
+    g = sCurve[clamp8(g * 255)] / 255;
+    b = sCurve[clamp8(b * 255)] / 255;
 
-    // Warm amber color matrix: R up, G neutral, B down
-    const nr = r * 1.08 + g * 0.02 + b * 0.0 + 0.02;
-    const ng = r * 0.01 + g * 1.0 + b * 0.01 - 0.005;
-    const nb = r * 0.0 + g * 0.02 + b * 0.88 - 0.01;
+    // Split tone: shadows → teal/blue, highlights → warm cream
+    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
 
-    // Highlight blowout: push highlights towards warm white
-    const lum = 0.299 * nr + 0.587 * ng + 0.114 * nb;
-    const blowout = Math.max(0, (lum - 0.7) / 0.3); // 0 below 0.7, ramps to 1 at 1.0
-    const blowR = nr + blowout * (1.0 - nr) * 0.6;
-    const blowG = ng + blowout * (0.97 - ng) * 0.5;
-    const blowB = nb + blowout * (0.90 - nb) * 0.4;
+    // Shadow tinting (dark areas get blue/teal)
+    const shadowAmount = Math.max(0, 1 - lum * 2.5); // strong below lum 0.4
+    r -= shadowAmount * 0.06;  // less red in shadows
+    g -= shadowAmount * 0.01;  // green roughly stays
+    b += shadowAmount * 0.10;  // blue pushed into shadows
 
-    d[i] = clamp8(blowR * 255);
-    d[i + 1] = clamp8(blowG * 255);
-    d[i + 2] = clamp8(blowB * 255);
+    // Highlight tinting (bright areas get warm cream)
+    const hiAmount = Math.max(0, (lum - 0.55) / 0.45); // ramp from 0.55 to 1.0
+    r += hiAmount * 0.08;   // warm red in highlights
+    g += hiAmount * 0.04;   // slight warmth
+    b -= hiAmount * 0.04;   // less blue in highlights
+
+    // Selective saturation: keep orange/yellow, mute others
+    const hue = getHue(r, g, b);
+    // Orange/yellow roughly 20-70 degrees
+    const isWarm = (hue >= 15 && hue <= 75);
+    if (!isWarm) {
+      // Desaturate non-warm colors further
+      const gray2 = 0.299 * r + 0.587 * g + 0.114 * b;
+      r = gray2 + 0.6 * (r - gray2);
+      g = gray2 + 0.6 * (g - gray2);
+      b = gray2 + 0.6 * (b - gray2);
+    }
+
+    d[i] = clamp8(clamp01(r) * 255);
+    d[i + 1] = clamp8(clamp01(g) * 255);
+    d[i + 2] = clamp8(clamp01(b) * 255);
   }
+}
+
+/** Get hue in degrees (0-360) from RGB (0-1). */
+function getHue(r: number, g: number, b: number): number {
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const d = max - min;
+  if (d === 0) return 0;
+  let h = 0;
+  if (max === r) h = ((g - b) / d) % 6;
+  else if (max === g) h = (b - r) / d + 2;
+  else h = (r - g) / d + 4;
+  h = h * 60;
+  if (h < 0) h += 360;
+  return h;
 }
 
 /**
@@ -445,19 +486,19 @@ function drawLightLeak(
   ctx.save();
   ctx.globalCompositeOperation = "screen";
 
-  // Top-right warm leak
+  // Top-right: warm amber leak (highlights get creamy)
   const g1 = ctx.createRadialGradient(w * 0.85, h * 0.1, 0, w * 0.85, h * 0.1, w * 0.5);
-  g1.addColorStop(0, "rgba(255, 180, 80, 0.18)");
-  g1.addColorStop(0.5, "rgba(255, 140, 50, 0.06)");
-  g1.addColorStop(1, "rgba(255, 100, 30, 0)");
+  g1.addColorStop(0, "rgba(255, 200, 120, 0.15)");
+  g1.addColorStop(0.5, "rgba(255, 170, 90, 0.05)");
+  g1.addColorStop(1, "rgba(255, 140, 60, 0)");
   ctx.fillStyle = g1;
   ctx.fillRect(0, 0, w, h);
 
-  // Bottom-left subtle amber leak
-  const g2 = ctx.createRadialGradient(w * 0.1, h * 0.9, 0, w * 0.1, h * 0.9, w * 0.4);
-  g2.addColorStop(0, "rgba(255, 160, 60, 0.12)");
-  g2.addColorStop(0.5, "rgba(255, 120, 40, 0.04)");
-  g2.addColorStop(1, "rgba(255, 80, 20, 0)");
+  // Bottom-left: cool teal leak (Polaroid light leak often has cool cast)
+  const g2 = ctx.createRadialGradient(w * 0.1, h * 0.85, 0, w * 0.1, h * 0.85, w * 0.45);
+  g2.addColorStop(0, "rgba(80, 180, 200, 0.10)");
+  g2.addColorStop(0.5, "rgba(60, 150, 180, 0.04)");
+  g2.addColorStop(1, "rgba(40, 120, 160, 0)");
   ctx.fillStyle = g2;
   ctx.fillRect(0, 0, w, h);
 
