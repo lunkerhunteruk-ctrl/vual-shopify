@@ -27,7 +27,14 @@ import { fetchProducts } from "../../lib/shopify/products.server";
 import { generateImage } from "../../lib/ai/gemini-image.server";
 import { uploadImageToProduct } from "../../lib/shopify/images.server";
 import { getCreditStatus, consumeCredit } from "../../lib/billing/credit-tracker.server";
-import { applyFilter, applyFilterThumbnail, FILTERS, type FilterId } from "../../lib/photo-filters";
+import type { FilterId } from "../../lib/photo-filters";
+const FILTERS: { id: FilterId; label: string }[] = [
+  { id: "none", label: "Original" },
+  { id: "natural", label: "Natural" },
+  { id: "film", label: "Film" },
+  { id: "chrome", label: "Chrome" },
+  { id: "neg", label: "Neg" },
+];
 
 // Model database type
 interface ModelEntry {
@@ -585,13 +592,15 @@ export default function StudioPage() {
         // Generate filter thumbnails for the first image
         if (data.images?.[0]) {
           const src = data.images[0];
-          Promise.all(
-            FILTERS.map(async (f) => {
-              const thumb = await applyFilterThumbnail(src, f.id, 120);
-              return [f.id, thumb] as const;
-            })
-          ).then((entries) => {
-            setFilterThumbnails(Object.fromEntries(entries));
+          import("../../lib/photo-filters").then(({ applyFilterThumbnail }) => {
+            Promise.all(
+              FILTERS.map(async (f) => {
+                const thumb = await applyFilterThumbnail(src, f.id, 120);
+                return [f.id, thumb] as const;
+              })
+            ).then((entries) => {
+              setFilterThumbnails(Object.fromEntries(entries));
+            });
           });
         }
         // Update local credit count
@@ -1090,6 +1099,7 @@ export default function StudioPage() {
                                     if (filteredImages[cacheKey]) return;
                                     setFilterProcessing(true);
                                     try {
+                                      const { applyFilter } = await import("../../lib/photo-filters");
                                       const result = await applyFilter(img, f.id);
                                       setFilteredImages((prev) => ({ ...prev, [cacheKey]: result }));
                                     } finally {
