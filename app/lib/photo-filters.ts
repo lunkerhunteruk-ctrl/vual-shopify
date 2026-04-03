@@ -5,7 +5,7 @@
  * and returns a base64 data-URL.
  */
 
-export type FilterId = "none" | "natural" | "film" | "chrome" | "polaroid" | "polaroidBlue";
+export type FilterId = "none" | "natural" | "film" | "chrome" | "polaroid" | "polaroidDusk" | "polaroidBlue";
 
 export interface FilterMeta {
   id: FilterId;
@@ -18,6 +18,7 @@ export const FILTERS: FilterMeta[] = [
   { id: "film", label: "Film" },
   { id: "chrome", label: "Chrome" },
   { id: "polaroid", label: "Polaroid" },
+  { id: "polaroidDusk", label: "Polaroid Dusk" },
   { id: "polaroidBlue", label: "Polaroid Blue" },
 ];
 
@@ -42,15 +43,17 @@ export async function applyFilter(
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
   // Polaroid variants need special handling (blur + light leak are canvas-level)
-  if (filterId === "polaroid" || filterId === "polaroidBlue") {
+  if (filterId === "polaroid" || filterId === "polaroidDusk" || filterId === "polaroidBlue") {
     if (filterId === "polaroidBlue") {
       applyPolaroidBlue(imageData);
+    } else if (filterId === "polaroidDusk") {
+      applyPolaroidDusk(imageData);
     } else {
       applyPolaroid(imageData);
     }
     ctx.putImageData(imageData, 0, 0);
     drawRadialBlur(ctx, canvas.width, canvas.height, 0.8);
-    drawLightLeak(ctx, canvas.width, canvas.height, filterId === "polaroidBlue");
+    drawLightLeak(ctx, canvas.width, canvas.height, filterId === "polaroidBlue" ? "blue" : filterId === "polaroidDusk" ? "dusk" : "warm");
     drawVignette(ctx, canvas.width, canvas.height, 0.55, 0.45);
     return canvas.toDataURL("image/png");
   }
@@ -245,6 +248,65 @@ function applyPolaroidBlue(data: ImageData) {
       r = gray2 + 0.55 * (r - gray2);
       g = gray2 + 0.55 * (g - gray2);
       b = gray2 + 0.55 * (b - gray2);
+    }
+
+    d[i] = clamp8(clamp01(r) * 255);
+    d[i + 1] = clamp8(clamp01(g) * 255);
+    d[i + 2] = clamp8(clamp01(b) * 255);
+  }
+}
+
+/**
+ * Polaroid Dusk: midpoint between Polaroid and Polaroid Blue.
+ * Cool-leaning but not fully blue — twilight tones with subtle warmth in highlights.
+ */
+function applyPolaroidDusk(data: ImageData) {
+  const sCurve = buildToneCurveLUT([
+    [0, 0.07],
+    [0.15, 0.11],
+    [0.35, 0.29],
+    [0.50, 0.51],
+    [0.65, 0.745],
+    [0.85, 0.915],
+    [1.0, 0.965],
+  ]);
+
+  const d = data.data;
+  for (let i = 0; i < d.length; i += 4) {
+    // Between Polaroid (bright+0.04, contrast 1.10, sat 0.78) and Blue (bright+0.02, contrast 1.12, sat 0.72)
+    let { r, g, b } = adjustBCS(d[i] / 255, d[i + 1] / 255, d[i + 2] / 255, 0.03, 1.11, 0.75);
+
+    r = sCurve[clamp8(r * 255)] / 255;
+    g = sCurve[clamp8(g * 255)] / 255;
+    b = sCurve[clamp8(b * 255)] / 255;
+
+    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+
+    // Shadow tinting — between Polaroid (subtle teal) and Blue (strong blue)
+    const shadowAmount = Math.max(0, 1 - lum * 2.35);
+    r -= shadowAmount * 0.08;
+    g -= shadowAmount * 0.015;
+    b += shadowAmount * 0.13;
+
+    // Midtone: gentle blue push (between Polaroid's 0 and Blue's -0.03/+0.05)
+    r -= 0.015;
+    b += 0.025;
+
+    // Highlight tinting — warm but restrained (between Polaroid's strong warm and Blue's subtle)
+    const hiAmount = Math.max(0, (lum - 0.575) / 0.425);
+    r += hiAmount * 0.06;
+    g += hiAmount * 0.03;
+    b -= hiAmount * 0.03;
+
+    // Selective saturation: mute non-cool, non-warm
+    const hue = getHue(clamp01(r), clamp01(g), clamp01(b));
+    const isCool = (hue >= 170 && hue <= 260);
+    const isWarm = (hue >= 15 && hue <= 75);
+    if (!isCool && !isWarm) {
+      const gray2 = 0.299 * r + 0.587 * g + 0.114 * b;
+      r = gray2 + 0.575 * (r - gray2);
+      g = gray2 + 0.575 * (g - gray2);
+      b = gray2 + 0.575 * (b - gray2);
     }
 
     d[i] = clamp8(clamp01(r) * 255);
@@ -488,12 +550,12 @@ function drawRadialBlur(
 function drawLightLeak(
   ctx: CanvasRenderingContext2D,
   w: number, h: number,
-  blueMode = false,
+  mode: "warm" | "dusk" | "blue" = "warm",
 ) {
   ctx.save();
   ctx.globalCompositeOperation = "screen";
 
-  if (blueMode) {
+  if (mode === "blue") {
     // Blue mode: both leaks are cool-toned
     const g1 = ctx.createRadialGradient(w * 0.85, h * 0.1, 0, w * 0.85, h * 0.1, w * 0.5);
     g1.addColorStop(0, "rgba(100, 160, 220, 0.14)");
@@ -506,6 +568,21 @@ function drawLightLeak(
     g2.addColorStop(0, "rgba(60, 140, 200, 0.12)");
     g2.addColorStop(0.5, "rgba(40, 120, 180, 0.05)");
     g2.addColorStop(1, "rgba(30, 100, 160, 0)");
+    ctx.fillStyle = g2;
+    ctx.fillRect(0, 0, w, h);
+  } else if (mode === "dusk") {
+    // Dusk mode: muted lavender/steel blue — between warm and blue
+    const g1 = ctx.createRadialGradient(w * 0.85, h * 0.1, 0, w * 0.85, h * 0.1, w * 0.5);
+    g1.addColorStop(0, "rgba(160, 160, 210, 0.14)");
+    g1.addColorStop(0.5, "rgba(130, 140, 190, 0.05)");
+    g1.addColorStop(1, "rgba(100, 120, 170, 0)");
+    ctx.fillStyle = g1;
+    ctx.fillRect(0, 0, w, h);
+
+    const g2 = ctx.createRadialGradient(w * 0.1, h * 0.85, 0, w * 0.1, h * 0.85, w * 0.45);
+    g2.addColorStop(0, "rgba(70, 150, 200, 0.11)");
+    g2.addColorStop(0.5, "rgba(50, 130, 180, 0.04)");
+    g2.addColorStop(1, "rgba(35, 110, 165, 0)");
     ctx.fillStyle = g2;
     ctx.fillRect(0, 0, w, h);
   } else {

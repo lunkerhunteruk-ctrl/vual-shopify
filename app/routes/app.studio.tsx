@@ -34,6 +34,7 @@ const FILTERS: { id: FilterId; label: string }[] = [
   { id: "film", label: "Film" },
   { id: "chrome", label: "Chrome" },
   { id: "polaroid", label: "Polaroid" },
+  { id: "polaroidDusk", label: "Polaroid Dusk" },
   { id: "polaroidBlue", label: "Polaroid Blue" },
 ];
 
