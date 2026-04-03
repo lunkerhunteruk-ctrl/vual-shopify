@@ -34,6 +34,7 @@ const FILTERS: { id: FilterId; label: string }[] = [
   { id: "film", label: "Film" },
   { id: "chrome", label: "Chrome" },
   { id: "neg", label: "Neg" },
+  { id: "polaroid", label: "Polaroid" },
 ];
 
 // Model database type

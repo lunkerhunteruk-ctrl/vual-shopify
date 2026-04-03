@@ -5,7 +5,7 @@
  * and returns a base64 data-URL.
  */
 
-export type FilterId = "none" | "natural" | "film" | "chrome" | "neg";
+export type FilterId = "none" | "natural" | "film" | "chrome" | "neg" | "polaroid";
 
 export interface FilterMeta {
   id: FilterId;
@@ -18,6 +18,7 @@ export const FILTERS: FilterMeta[] = [
   { id: "film", label: "Film" },
   { id: "chrome", label: "Chrome" },
   { id: "neg", label: "Neg" },
+  { id: "polaroid", label: "Polaroid" },
 ];
 
 // ─── public API ────────────────────────────────────────────
@@ -39,6 +40,19 @@ export async function applyFilter(
   ctx.drawImage(img, 0, 0);
 
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  // Polaroid needs special handling (blur + light leak are canvas-level effects)
+  if (filterId === "polaroid") {
+    applyPolaroid(imageData);
+    ctx.putImageData(imageData, 0, 0);
+    // Soft radial blur: center sharp, edges soft (lens aberration)
+    drawRadialBlur(ctx, canvas.width, canvas.height, 0.8);
+    // Light leak (warm glow from corners)
+    drawLightLeak(ctx, canvas.width, canvas.height);
+    // Strong vignette
+    drawVignette(ctx, canvas.width, canvas.height, 0.55, 0.45);
+    return canvas.toDataURL("image/png");
+  }
 
   switch (filterId) {
     case "natural":
@@ -333,4 +347,119 @@ function fitDimensions(w: number, h: number, maxDim: number): { w: number; h: nu
   if (w <= maxDim && h <= maxDim) return { w, h };
   const scale = maxDim / Math.max(w, h);
   return { w: Math.round(w * scale), h: Math.round(h * scale) };
+}
+
+// ─── Polaroid filter ───────────────────────────────────────
+
+/**
+ * Polaroid: warm amber tone, low contrast, lifted shadows, highlight blowout.
+ * Inspired by Polaroid 600 / SX-70 film characteristics.
+ */
+function applyPolaroid(data: ImageData) {
+  const d = data.data;
+  for (let i = 0; i < d.length; i += 4) {
+    // Low contrast, lifted brightness
+    let { r, g, b } = adjustBCS(d[i] / 255, d[i + 1] / 255, d[i + 2] / 255, 0.10, 0.92, 0.90);
+
+    // Lift shadows (blacks never go fully dark)
+    r = r * 0.88 + 0.12;
+    g = g * 0.88 + 0.12;
+    b = b * 0.88 + 0.12;
+
+    // Warm amber color matrix: R up, G neutral, B down
+    const nr = r * 1.08 + g * 0.02 + b * 0.0 + 0.02;
+    const ng = r * 0.01 + g * 1.0 + b * 0.01 - 0.005;
+    const nb = r * 0.0 + g * 0.02 + b * 0.88 - 0.01;
+
+    // Highlight blowout: push highlights towards warm white
+    const lum = 0.299 * nr + 0.587 * ng + 0.114 * nb;
+    const blowout = Math.max(0, (lum - 0.7) / 0.3); // 0 below 0.7, ramps to 1 at 1.0
+    const blowR = nr + blowout * (1.0 - nr) * 0.6;
+    const blowG = ng + blowout * (0.97 - ng) * 0.5;
+    const blowB = nb + blowout * (0.90 - nb) * 0.4;
+
+    d[i] = clamp8(blowR * 255);
+    d[i + 1] = clamp8(blowG * 255);
+    d[i + 2] = clamp8(blowB * 255);
+  }
+}
+
+/**
+ * Radial blur: center stays sharp, edges get soft.
+ * Simulates Polaroid lens softness / chromatic aberration.
+ */
+function drawRadialBlur(
+  ctx: CanvasRenderingContext2D,
+  w: number, h: number,
+  maxBlurPx: number,
+) {
+  // Create a blurred copy of the entire image
+  const blurred = document.createElement("canvas");
+  blurred.width = w;
+  blurred.height = h;
+  const bCtx = blurred.getContext("2d")!;
+  bCtx.filter = `blur(${maxBlurPx}px)`;
+  bCtx.drawImage(ctx.canvas, 0, 0);
+
+  // Create a radial gradient mask: transparent center, opaque edges
+  const mask = document.createElement("canvas");
+  mask.width = w;
+  mask.height = h;
+  const mCtx = mask.getContext("2d")!;
+
+  const cx = w / 2;
+  const cy = h / 2;
+  const radius = Math.max(w, h) * 0.5;
+
+  const grad = mCtx.createRadialGradient(cx, cy, radius * 0.35, cx, cy, radius);
+  grad.addColorStop(0, "rgba(0,0,0,0)");    // center: transparent (keep sharp)
+  grad.addColorStop(0.6, "rgba(0,0,0,0)");  // still sharp at 60% radius
+  grad.addColorStop(1, "rgba(0,0,0,1)");    // edges: fully blurred
+
+  mCtx.fillStyle = grad;
+  mCtx.fillRect(0, 0, w, h);
+
+  // Draw blurred image through the mask
+  // Use the mask as a clip: draw blurred canvas, then use destination-in to mask
+  const comp = document.createElement("canvas");
+  comp.width = w;
+  comp.height = h;
+  const cCtx = comp.getContext("2d")!;
+  cCtx.drawImage(blurred, 0, 0);
+  cCtx.globalCompositeOperation = "destination-in";
+  cCtx.drawImage(mask, 0, 0);
+  cCtx.globalCompositeOperation = "source-over";
+
+  // Composite the masked blur on top of the original
+  ctx.drawImage(comp, 0, 0);
+}
+
+/**
+ * Light leak: warm orange/amber glow bleeding from corners.
+ * Classic Polaroid artifact.
+ */
+function drawLightLeak(
+  ctx: CanvasRenderingContext2D,
+  w: number, h: number,
+) {
+  ctx.save();
+  ctx.globalCompositeOperation = "screen";
+
+  // Top-right warm leak
+  const g1 = ctx.createRadialGradient(w * 0.85, h * 0.1, 0, w * 0.85, h * 0.1, w * 0.5);
+  g1.addColorStop(0, "rgba(255, 180, 80, 0.18)");
+  g1.addColorStop(0.5, "rgba(255, 140, 50, 0.06)");
+  g1.addColorStop(1, "rgba(255, 100, 30, 0)");
+  ctx.fillStyle = g1;
+  ctx.fillRect(0, 0, w, h);
+
+  // Bottom-left subtle amber leak
+  const g2 = ctx.createRadialGradient(w * 0.1, h * 0.9, 0, w * 0.1, h * 0.9, w * 0.4);
+  g2.addColorStop(0, "rgba(255, 160, 60, 0.12)");
+  g2.addColorStop(0.5, "rgba(255, 120, 40, 0.04)");
+  g2.addColorStop(1, "rgba(255, 80, 20, 0)");
+  ctx.fillStyle = g2;
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.restore();
 }
