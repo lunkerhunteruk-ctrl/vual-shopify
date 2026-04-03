@@ -5,7 +5,7 @@
  * and returns a base64 data-URL.
  */
 
-export type FilterId = "none" | "natural" | "film" | "chrome" | "neg" | "polaroid";
+export type FilterId = "none" | "natural" | "film" | "chrome" | "polaroid" | "polaroidBlue";
 
 export interface FilterMeta {
   id: FilterId;
@@ -17,8 +17,8 @@ export const FILTERS: FilterMeta[] = [
   { id: "natural", label: "Natural" },
   { id: "film", label: "Film" },
   { id: "chrome", label: "Chrome" },
-  { id: "neg", label: "Neg" },
   { id: "polaroid", label: "Polaroid" },
+  { id: "polaroidBlue", label: "Polaroid Blue" },
 ];
 
 // ─── public API ────────────────────────────────────────────
@@ -41,15 +41,16 @@ export async function applyFilter(
 
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-  // Polaroid needs special handling (blur + light leak are canvas-level effects)
-  if (filterId === "polaroid") {
-    applyPolaroid(imageData);
+  // Polaroid variants need special handling (blur + light leak are canvas-level)
+  if (filterId === "polaroid" || filterId === "polaroidBlue") {
+    if (filterId === "polaroidBlue") {
+      applyPolaroidBlue(imageData);
+    } else {
+      applyPolaroid(imageData);
+    }
     ctx.putImageData(imageData, 0, 0);
-    // Soft radial blur: center sharp, edges soft (lens aberration)
     drawRadialBlur(ctx, canvas.width, canvas.height, 0.8);
-    // Light leak (warm glow from corners)
-    drawLightLeak(ctx, canvas.width, canvas.height);
-    // Strong vignette
+    drawLightLeak(ctx, canvas.width, canvas.height, filterId === "polaroidBlue");
     drawVignette(ctx, canvas.width, canvas.height, 0.55, 0.45);
     return canvas.toDataURL("image/png");
   }
@@ -63,9 +64,6 @@ export async function applyFilter(
       break;
     case "chrome":
       applyClassicChrome(imageData);
-      break;
-    case "neg":
-      applyClassicNeg(imageData);
       break;
   }
 
@@ -81,9 +79,6 @@ export async function applyFilter(
       break;
     case "chrome":
       drawVignette(ctx, canvas.width, canvas.height, 0.4, 0.62);
-      break;
-    case "neg":
-      drawVignette(ctx, canvas.width, canvas.height, 0.26, 0.5);
       break;
   }
 
@@ -201,49 +196,60 @@ function applyClassicChrome(data: ImageData) {
 }
 
 /**
- * Classic Neg: muted, lifted shadows, subtle sepia, tone curve.
- * Core Image params:
- *   ColorControls: sat 0.84, bright +0.02, contrast 1.06
- *   HighlightShadowAdjust: shadow 0.38, highlight -0.02
- *   SepiaTone: 0.18
- *   ToneCurve: (0,0),(0.25,0.27),(0.5,0.58),(0.75,0.84),(1,1)
+ * Polaroid Blue: stronger blue/teal version of Polaroid.
+ * Deeper blue shadows, cooler midtones, highlights still slightly warm.
  */
-function applyClassicNeg(data: ImageData) {
-  // Build tone curve LUT
-  const curveLUT = buildToneCurveLUT([
-    [0, 0], [0.25, 0.27], [0.5, 0.58], [0.75, 0.84], [1, 1],
+function applyPolaroidBlue(data: ImageData) {
+  const sCurve = buildToneCurveLUT([
+    [0, 0.06],
+    [0.15, 0.10],
+    [0.35, 0.28],
+    [0.50, 0.50],
+    [0.65, 0.74],
+    [0.85, 0.91],
+    [1.0, 0.96],
   ]);
 
   const d = data.data;
   for (let i = 0; i < d.length; i += 4) {
-    let { r, g, b } = adjustBCS(d[i] / 255, d[i + 1] / 255, d[i + 2] / 255, 0.02, 1.06, 0.84);
+    let { r, g, b } = adjustBCS(d[i] / 255, d[i + 1] / 255, d[i + 2] / 255, 0.02, 1.12, 0.72);
 
-    // Shadow/highlight adjust
+    r = sCurve[clamp8(r * 255)] / 255;
+    g = sCurve[clamp8(g * 255)] / 255;
+    b = sCurve[clamp8(b * 255)] / 255;
+
     const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-    const shadowLift = 0.38 * Math.max(0, 0.5 - lum) * 2; // lift dark areas
-    const highlightAdj = -0.02 * Math.max(0, lum - 0.5) * 2;
-    const adj = shadowLift + highlightAdj;
-    r = clamp01(r + adj);
-    g = clamp01(g + adj);
-    b = clamp01(b + adj);
 
-    // Sepia tone (intensity 0.18)
-    const sepiaR = r * 0.393 + g * 0.769 + b * 0.189;
-    const sepiaG = r * 0.349 + g * 0.686 + b * 0.168;
-    const sepiaB = r * 0.272 + g * 0.534 + b * 0.131;
-    const si = 0.18;
-    r = r * (1 - si) + sepiaR * si;
-    g = g * (1 - si) + sepiaG * si;
-    b = b * (1 - si) + sepiaB * si;
+    // Shadow tinting — strong blue/teal
+    const shadowAmount = Math.max(0, 1 - lum * 2.2);
+    r -= shadowAmount * 0.10;
+    g -= shadowAmount * 0.02;
+    b += shadowAmount * 0.16;
 
-    // Tone curve
-    r = curveLUT[clamp8(r * 255)] / 255;
-    g = curveLUT[clamp8(g * 255)] / 255;
-    b = curveLUT[clamp8(b * 255)] / 255;
+    // Midtone blue push (affects everything mildly)
+    r -= 0.03;
+    b += 0.05;
 
-    d[i] = clamp8(r * 255);
-    d[i + 1] = clamp8(g * 255);
-    d[i + 2] = clamp8(b * 255);
+    // Highlight tinting — subtle warm cream (less warm than Polaroid)
+    const hiAmount = Math.max(0, (lum - 0.6) / 0.4);
+    r += hiAmount * 0.04;
+    g += hiAmount * 0.02;
+    b -= hiAmount * 0.02;
+
+    // Selective saturation: mute everything except blue/teal range
+    const hue = getHue(clamp01(r), clamp01(g), clamp01(b));
+    const isCool = (hue >= 170 && hue <= 260); // blue-cyan range
+    const isWarm = (hue >= 15 && hue <= 75); // orange-yellow
+    if (!isCool && !isWarm) {
+      const gray2 = 0.299 * r + 0.587 * g + 0.114 * b;
+      r = gray2 + 0.55 * (r - gray2);
+      g = gray2 + 0.55 * (g - gray2);
+      b = gray2 + 0.55 * (b - gray2);
+    }
+
+    d[i] = clamp8(clamp01(r) * 255);
+    d[i + 1] = clamp8(clamp01(g) * 255);
+    d[i + 2] = clamp8(clamp01(b) * 255);
   }
 }
 
@@ -482,25 +488,42 @@ function drawRadialBlur(
 function drawLightLeak(
   ctx: CanvasRenderingContext2D,
   w: number, h: number,
+  blueMode = false,
 ) {
   ctx.save();
   ctx.globalCompositeOperation = "screen";
 
-  // Top-right: warm amber leak (highlights get creamy)
-  const g1 = ctx.createRadialGradient(w * 0.85, h * 0.1, 0, w * 0.85, h * 0.1, w * 0.5);
-  g1.addColorStop(0, "rgba(255, 200, 120, 0.15)");
-  g1.addColorStop(0.5, "rgba(255, 170, 90, 0.05)");
-  g1.addColorStop(1, "rgba(255, 140, 60, 0)");
-  ctx.fillStyle = g1;
-  ctx.fillRect(0, 0, w, h);
+  if (blueMode) {
+    // Blue mode: both leaks are cool-toned
+    const g1 = ctx.createRadialGradient(w * 0.85, h * 0.1, 0, w * 0.85, h * 0.1, w * 0.5);
+    g1.addColorStop(0, "rgba(100, 160, 220, 0.14)");
+    g1.addColorStop(0.5, "rgba(70, 130, 200, 0.05)");
+    g1.addColorStop(1, "rgba(50, 100, 180, 0)");
+    ctx.fillStyle = g1;
+    ctx.fillRect(0, 0, w, h);
 
-  // Bottom-left: cool teal leak (Polaroid light leak often has cool cast)
-  const g2 = ctx.createRadialGradient(w * 0.1, h * 0.85, 0, w * 0.1, h * 0.85, w * 0.45);
-  g2.addColorStop(0, "rgba(80, 180, 200, 0.10)");
-  g2.addColorStop(0.5, "rgba(60, 150, 180, 0.04)");
-  g2.addColorStop(1, "rgba(40, 120, 160, 0)");
-  ctx.fillStyle = g2;
-  ctx.fillRect(0, 0, w, h);
+    const g2 = ctx.createRadialGradient(w * 0.1, h * 0.85, 0, w * 0.1, h * 0.85, w * 0.45);
+    g2.addColorStop(0, "rgba(60, 140, 200, 0.12)");
+    g2.addColorStop(0.5, "rgba(40, 120, 180, 0.05)");
+    g2.addColorStop(1, "rgba(30, 100, 160, 0)");
+    ctx.fillStyle = g2;
+    ctx.fillRect(0, 0, w, h);
+  } else {
+    // Standard: warm top-right, cool bottom-left
+    const g1 = ctx.createRadialGradient(w * 0.85, h * 0.1, 0, w * 0.85, h * 0.1, w * 0.5);
+    g1.addColorStop(0, "rgba(255, 200, 120, 0.15)");
+    g1.addColorStop(0.5, "rgba(255, 170, 90, 0.05)");
+    g1.addColorStop(1, "rgba(255, 140, 60, 0)");
+    ctx.fillStyle = g1;
+    ctx.fillRect(0, 0, w, h);
+
+    const g2 = ctx.createRadialGradient(w * 0.1, h * 0.85, 0, w * 0.1, h * 0.85, w * 0.45);
+    g2.addColorStop(0, "rgba(80, 180, 200, 0.10)");
+    g2.addColorStop(0.5, "rgba(60, 150, 180, 0.04)");
+    g2.addColorStop(1, "rgba(40, 120, 160, 0)");
+    ctx.fillStyle = g2;
+    ctx.fillRect(0, 0, w, h);
+  }
 
   ctx.restore();
 }

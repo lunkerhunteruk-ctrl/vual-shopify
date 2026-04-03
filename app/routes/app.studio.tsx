@@ -33,8 +33,8 @@ const FILTERS: { id: FilterId; label: string }[] = [
   { id: "natural", label: "Natural" },
   { id: "film", label: "Film" },
   { id: "chrome", label: "Chrome" },
-  { id: "neg", label: "Neg" },
   { id: "polaroid", label: "Polaroid" },
+  { id: "polaroidBlue", label: "Polaroid Blue" },
 ];
 
 // Model database type
