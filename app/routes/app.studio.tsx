@@ -27,6 +27,7 @@ import { fetchProducts } from "../../lib/shopify/products.server";
 import { generateImage } from "../../lib/ai/gemini-image.server";
 import { uploadImageToProduct } from "../../lib/shopify/images.server";
 import { getCreditStatus, consumeCredit } from "../../lib/billing/credit-tracker.server";
+import { applyFilter, applyFilterThumbnail, FILTERS, type FilterId } from "../../lib/photo-filters";
 
 // Model database type
 interface ModelEntry {
@@ -514,6 +515,12 @@ export default function StudioPage() {
   // Review prompt state
   const [showReviewBanner, setShowReviewBanner] = useState(false);
 
+  // Filter state
+  const [selectedFilter, setSelectedFilter] = useState<FilterId>("none");
+  const [filteredImages, setFilteredImages] = useState<Record<string, string>>({});
+  const [filterThumbnails, setFilterThumbnails] = useState<Record<string, string>>({});
+  const [filterProcessing, setFilterProcessing] = useState(false);
+
   const isGenerating =
     fetcher.state !== "idle" &&
     fetcher.formData?.get("intent") === "generate";
@@ -571,7 +578,22 @@ export default function StudioPage() {
       if (data.success && data.images?.length > 0) {
         setGeneratedImages(data.images);
         setGenerationError(null);
+        setSelectedFilter("none");
+        setFilteredImages({});
+        setFilterThumbnails({});
         setShowResultModal(true);
+        // Generate filter thumbnails for the first image
+        if (data.images?.[0]) {
+          const src = data.images[0];
+          Promise.all(
+            FILTERS.map(async (f) => {
+              const thumb = await applyFilterThumbnail(src, f.id, 120);
+              return [f.id, thumb] as const;
+            })
+          ).then((entries) => {
+            setFilterThumbnails(Object.fromEntries(entries));
+          });
+        }
         // Update local credit count
         if (data.creditsRemaining !== undefined) {
           setLocalCredits((prev) => ({
@@ -1044,24 +1066,77 @@ export default function StudioPage() {
                     </div>
                   )}
                   <BlockStack gap="400">
-                    {generatedImages.map((img, i) => (
+                    {generatedImages.map((img, i) => {
+                      const displayImg = (selectedFilter !== "none" && filteredImages[`${i}-${selectedFilter}`]) || img;
+                      return (
                       <BlockStack gap="300" key={i}>
                         <Box borderRadius="200" borderWidth="025" borderColor="border" padding="200">
-                          <img src={img} alt={`Generated look ${i + 1}`} style={{ width: "100%", maxHeight: "calc(90vh - 220px)", objectFit: "contain", borderRadius: "8px", display: "block" }} />
+                          <img src={displayImg} alt={`Generated look ${i + 1}`} style={{ width: "100%", maxHeight: "calc(90vh - 320px)", objectFit: "contain", borderRadius: "8px", display: "block", transition: "opacity 0.3s", opacity: filterProcessing ? 0.5 : 1 }} />
                         </Box>
+
+                        {/* Filter selection */}
+                        <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: "4px" }}>
+                          <div style={{ display: "flex", gap: "8px", minWidth: "min-content" }}>
+                            {FILTERS.map((f) => {
+                              const isActive = selectedFilter === f.id;
+                              const thumbSrc = filterThumbnails[f.id];
+                              return (
+                                <button
+                                  key={f.id}
+                                  onClick={async () => {
+                                    setSelectedFilter(f.id);
+                                    if (f.id === "none") return;
+                                    const cacheKey = `${i}-${f.id}`;
+                                    if (filteredImages[cacheKey]) return;
+                                    setFilterProcessing(true);
+                                    try {
+                                      const result = await applyFilter(img, f.id);
+                                      setFilteredImages((prev) => ({ ...prev, [cacheKey]: result }));
+                                    } finally {
+                                      setFilterProcessing(false);
+                                    }
+                                  }}
+                                  style={{
+                                    flex: "0 0 auto",
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                    padding: "4px",
+                                    border: isActive ? "2px solid #333" : "2px solid transparent",
+                                    borderRadius: "8px",
+                                    background: "none",
+                                    cursor: "pointer",
+                                    opacity: filterProcessing && !isActive ? 0.5 : 1,
+                                  }}
+                                >
+                                  {thumbSrc ? (
+                                    <img src={thumbSrc} alt={f.label} style={{ width: "56px", height: "56px", objectFit: "cover", borderRadius: "6px" }} />
+                                  ) : (
+                                    <div style={{ width: "56px", height: "56px", borderRadius: "6px", background: "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", color: "#999" }}>
+                                      {f.id === "none" ? "—" : "..."}
+                                    </div>
+                                  )}
+                                  <span style={{ fontSize: "11px", color: isActive ? "#333" : "#888", fontWeight: isActive ? 600 : 400 }}>{f.label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
                         <InlineStack gap="200">
-                          <Button onClick={() => { const ext = img.startsWith("data:image/jpeg") ? "jpg" : "png"; fetch(img).then(r => r.blob()).then(blob => { const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `vual-studio-${Date.now()}.${ext}`; link.click(); URL.revokeObjectURL(url); }); }} size="slim">
+                          <Button onClick={() => { const src = displayImg; const ext = src.startsWith("data:image/jpeg") ? "jpg" : "png"; fetch(src).then(r => r.blob()).then(blob => { const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `vual-studio-${Date.now()}.${ext}`; link.click(); URL.revokeObjectURL(url); }); }} size="slim">
                             Download
                           </Button>
                         </InlineStack>
                         {selectedProductData.length > 0 && (
                           <BlockStack gap="300">
-                            <Button variant="primary" fullWidth onClick={() => handleSaveAllAndCollection(img)} loading={fetcher.state !== "idle" && fetcher.formData?.get("intent") === "saveAllAndCollection"}>
+                            <Button variant="primary" fullWidth onClick={() => handleSaveAllAndCollection(displayImg)} loading={fetcher.state !== "idle" && fetcher.formData?.get("intent") === "saveAllAndCollection"}>
                               Save to All Products + Create Collection
                             </Button>
                             <InlineStack gap="200" wrap>
                               {selectedProductData.map((p) => (
-                                <Button key={p.id} onClick={() => handleSaveToProduct(img, p.id)} loading={isSaving} size="slim">
+                                <Button key={p.id} onClick={() => handleSaveToProduct(displayImg, p.id)} loading={isSaving} size="slim">
                                   Save to {p.title}
                                 </Button>
                               ))}
@@ -1069,7 +1144,8 @@ export default function StudioPage() {
                           </BlockStack>
                         )}
                       </BlockStack>
-                    ))}
+                      );
+                    })}
                   </BlockStack>
                 </div>
               </div>
