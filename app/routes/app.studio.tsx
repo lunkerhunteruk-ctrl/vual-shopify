@@ -525,7 +525,6 @@ export default function StudioPage() {
   // Filter state
   const [selectedFilter, setSelectedFilter] = useState<FilterId>("none");
   const [filteredImages, setFilteredImages] = useState<Record<string, string>>({});
-  const [filterThumbnails, setFilterThumbnails] = useState<Record<string, string>>({});
   const [filterProcessing, setFilterProcessing] = useState(false);
 
   const isGenerating =
@@ -587,22 +586,7 @@ export default function StudioPage() {
         setGenerationError(null);
         setSelectedFilter("none");
         setFilteredImages({});
-        setFilterThumbnails({});
         setShowResultModal(true);
-        // Generate filter thumbnails for the first image
-        if (data.images?.[0]) {
-          const src = data.images[0];
-          import("../../lib/photo-filters").then(({ applyFilterThumbnail }) => {
-            Promise.all(
-              FILTERS.map(async (f) => {
-                const thumb = await applyFilterThumbnail(src, f.id, 120);
-                return [f.id, thumb] as const;
-              })
-            ).then((entries) => {
-              setFilterThumbnails(Object.fromEntries(entries));
-            });
-          });
-        }
         // Update local credit count
         if (data.creditsRemaining !== undefined) {
           setLocalCredits((prev) => ({
@@ -1084,55 +1068,47 @@ export default function StudioPage() {
                         </Box>
 
                         {/* Filter selection */}
-                        <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: "4px" }}>
-                          <div style={{ display: "flex", gap: "8px", minWidth: "min-content" }}>
-                            {FILTERS.map((f) => {
-                              const isActive = selectedFilter === f.id;
-                              const thumbSrc = filterThumbnails[f.id];
-                              return (
-                                <button
-                                  key={f.id}
-                                  onClick={async () => {
-                                    setSelectedFilter(f.id);
-                                    if (f.id === "none") return;
-                                    const cacheKey = `${i}-${f.id}`;
-                                    if (filteredImages[cacheKey]) return;
-                                    setFilterProcessing(true);
-                                    try {
-                                      const { applyFilter } = await import("../../lib/photo-filters");
-                                      const result = await applyFilter(img, f.id);
-                                      setFilteredImages((prev) => ({ ...prev, [cacheKey]: result }));
-                                    } finally {
-                                      setFilterProcessing(false);
-                                    }
-                                  }}
-                                  style={{
-                                    flex: "0 0 auto",
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    alignItems: "center",
-                                    gap: "4px",
-                                    padding: "4px",
-                                    border: isActive ? "2px solid #333" : "2px solid transparent",
-                                    borderRadius: "8px",
-                                    background: "none",
-                                    cursor: "pointer",
-                                    opacity: filterProcessing && !isActive ? 0.5 : 1,
-                                  }}
-                                >
-                                  {thumbSrc ? (
-                                    <img src={thumbSrc} alt={f.label} style={{ width: "56px", height: "56px", objectFit: "cover", borderRadius: "6px" }} />
-                                  ) : (
-                                    <div style={{ width: "56px", height: "56px", borderRadius: "6px", background: "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", color: "#999" }}>
-                                      {f.id === "none" ? "—" : "..."}
-                                    </div>
-                                  )}
-                                  <span style={{ fontSize: "11px", color: isActive ? "#333" : "#888", fontWeight: isActive ? 600 : 400 }}>{f.label}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
+                        <InlineStack gap="200" wrap>
+                          {FILTERS.map((f) => {
+                            const isActive = selectedFilter === f.id;
+                            return (
+                              <button
+                                key={f.id}
+                                disabled={filterProcessing && !isActive}
+                                onClick={async () => {
+                                  if (isActive) return;
+                                  setSelectedFilter(f.id);
+                                  if (f.id === "none") return;
+                                  const cacheKey = `${i}-${f.id}`;
+                                  if (filteredImages[cacheKey]) return;
+                                  setFilterProcessing(true);
+                                  try {
+                                    const { applyFilter } = await import("../../lib/photo-filters");
+                                    const result = await applyFilter(img, f.id);
+                                    setFilteredImages((prev) => ({ ...prev, [cacheKey]: result }));
+                                  } catch (err) {
+                                    console.error("Filter failed:", err);
+                                  } finally {
+                                    setFilterProcessing(false);
+                                  }
+                                }}
+                                style={{
+                                  padding: "6px 14px",
+                                  borderRadius: "20px",
+                                  border: isActive ? "2px solid #333" : "1px solid #ccc",
+                                  background: isActive ? "#333" : "#fff",
+                                  color: isActive ? "#fff" : "#555",
+                                  fontSize: "13px",
+                                  fontWeight: isActive ? 600 : 400,
+                                  cursor: filterProcessing && !isActive ? "wait" : "pointer",
+                                  opacity: filterProcessing && !isActive ? 0.5 : 1,
+                                }}
+                              >
+                                {filterProcessing && isActive && f.id !== "none" && !filteredImages[`${i}-${f.id}`] ? "Applying..." : f.label}
+                              </button>
+                            );
+                          })}
+                        </InlineStack>
 
                         <InlineStack gap="200">
                           <Button onClick={() => { const src = displayImg; const ext = src.startsWith("data:image/jpeg") ? "jpg" : "png"; fetch(src).then(r => r.blob()).then(blob => { const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `vual-studio-${Date.now()}.${ext}`; link.click(); URL.revokeObjectURL(url); }); }} size="slim">
