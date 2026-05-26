@@ -9,7 +9,8 @@ export function getSupabase() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !key) {
-    throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+    console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+    throw new Response("Service temporarily unavailable", { status: 503 });
   }
 
   supabaseClient = createClient(url, key);
