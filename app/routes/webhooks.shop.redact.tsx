@@ -9,11 +9,12 @@ import { authenticate } from "../shopify.server";
  * usage records from Supabase.
  */
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { shop, topic } = await authenticate.webhook(request);
-  console.log(`Received ${topic} webhook for ${shop}`);
-
-  // Clean up shop data from Supabase
+  let shop = "unknown";
   try {
+    const result = await authenticate.webhook(request);
+    shop = result.shop;
+    console.log(`Received ${result.topic} webhook for ${shop}`);
+
     const { getSupabase } = await import("../../lib/supabase.server");
     const supabase = getSupabase() as any;
 
@@ -31,8 +32,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     console.log(`Shop data redacted for ${shop}`);
   } catch (error) {
+    // Re-throw auth Response errors (HMAC validation failures etc.)
+    if (error instanceof Response) throw error;
     console.error(`Failed to redact shop data for ${shop}:`, error);
   }
 
-  return new Response();
+  return new Response("OK", { status: 200 });
 };
