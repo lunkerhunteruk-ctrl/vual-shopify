@@ -22,9 +22,10 @@ export default function App() {
   return (
     <div className={styles.index}>
       <div className={styles.content}>
-        <h1 className={styles.heading}>A short heading about [your app]</h1>
+        <h1 className={styles.heading}>VUAL Studio</h1>
         <p className={styles.text}>
-          A tagline about [your app] that describes your value proposition.
+          AI-powered model photography for your Shopify store. Generate
+          professional look images using your own products.
         </p>
         {showForm && (
           <Form className={styles.form} method="post" action="/auth/login">
@@ -40,16 +41,16 @@ export default function App() {
         )}
         <ul className={styles.list}>
           <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
+            <strong>AI Studio</strong>. Select products and generate
+            professional model photography in seconds.
           </li>
           <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
+            <strong>Virtual Try-On</strong>. Let customers visualize products
+            on a model directly in your storefront.
           </li>
           <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
+            <strong>Credit-based pricing</strong>. Start free with 12 points,
+            upgrade anytime for more generations.
           </li>
         </ul>
       </div>
