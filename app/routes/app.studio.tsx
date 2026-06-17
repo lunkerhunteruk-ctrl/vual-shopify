@@ -76,13 +76,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   ]);
 
   // Read model database
-  const fs = await import("fs");
-  const path = await import("path");
   let modelDatabase: ModelDatabase | null = null;
   try {
-    const dbPath = path.join(process.cwd(), "public", "models", "database.json");
-    const dbContent = fs.readFileSync(dbPath, "utf-8");
-    modelDatabase = JSON.parse(dbContent);
+    const appUrl = process.env.SHOPIFY_APP_URL || "https://vual-studio.vercel.app";
+    const res = await fetch(`${appUrl}/models/database.json`);
+    modelDatabase = await res.json();
   } catch (e) {
     console.error("Failed to load model database:", e);
   }
@@ -195,16 +193,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const fourthGarmentImages = validGarmentImages.length > 3 ? [validGarmentImages[3]] : undefined;
     const fifthGarmentImages = validGarmentImages.length > 4 ? [validGarmentImages[4]] : undefined;
 
-    // Convert model image (local file path) to base64
+    // Convert model image to base64 via HTTP fetch
     let modelImage: string | undefined;
     if (modelImagePath) {
       try {
-        const fs = await import("fs");
-        const path = await import("path");
-        const fullPath = path.join(process.cwd(), "public", modelImagePath);
-        const fileBuffer = fs.readFileSync(fullPath);
-        const base64 = fileBuffer.toString("base64");
-        modelImage = `data:image/jpeg;base64,${base64}`;
+        const appUrl = process.env.SHOPIFY_APP_URL || "https://vual-studio.vercel.app";
+        const imageUrl = `${appUrl}/${modelImagePath}`;
+        const res = await fetch(imageUrl);
+        const arrayBuffer = await res.arrayBuffer();
+        const base64 = Buffer.from(arrayBuffer).toString("base64");
+        const mimeType = modelImagePath.endsWith(".png") ? "image/png" : "image/jpeg";
+        modelImage = `data:${mimeType};base64,${base64}`;
       } catch (e) {
         console.error("Failed to read model image:", e);
       }
