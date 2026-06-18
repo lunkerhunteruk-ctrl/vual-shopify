@@ -115,7 +115,7 @@ function buildCoordinatePrompt(
   const fullBody = needsFullBody(categories);
   const shotDesc = fullBody
     ? "Full body shot showing the complete outfit including feet."
-    : "Half-body shot, waist up, clearly showing the upper garment(s). Do NOT show the lower body or feet.";
+    : "Three-quarter body shot from head to upper thigh, showing the full upper garment and the model's hands hanging naturally at the sides. The frame cuts off at upper thigh level. Do NOT show knees, lower legs, or feet.";
   const garmentDescs: string[] = [];
   for (let i = 0; i < categories.length; i++) {
     const label = categoryLabel(categories[i]);
@@ -177,7 +177,7 @@ function buildSimplifiedCoordinatePrompt(
   const modelDesc = buildModelDesc(modelSettings);
   const shotDesc = needsFullBody(categories)
     ? "full body"
-    : "half-body waist-up shot, do not show lower body";
+    : "three-quarter shot from head to upper thigh, hands visible at sides, no knees or feet";
   return `Virtual try-on: Show the person from the first image wearing these items from the garment images: ${items}. Remove all original clothing the person is wearing — only the provided garments should be visible. ${modelDesc} Professional fashion photography, white background, ${shotDesc}. One person only, no collages. Garments must match the reference images exactly.`;
 }
 
@@ -187,7 +187,7 @@ function buildMinimalCoordinatePrompt(
 ): string {
   const items = categories.map((c) => categoryLabel(c)).join(", ");
   const modelDesc = buildModelDesc(modelSettings);
-  const shotDesc = needsFullBody(categories) ? "full body" : "waist-up only";
+  const shotDesc = needsFullBody(categories) ? "full body" : "three-quarter shot to upper thigh, hands at sides";
   return `Fashion photo: Person from image 1 wearing the ${items} from the other images. Remove all original clothing. ${modelDesc} White background, ${shotDesc}, one person.`;
 }
 
