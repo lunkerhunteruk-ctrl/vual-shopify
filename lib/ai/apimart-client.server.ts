@@ -77,11 +77,25 @@ async function pollTask(taskId: string): Promise<PollResult> {
   }
 
   const json = await res.json();
+  // Log full response to diagnose structure
+  console.log(`[APIMart] Poll raw response: ${JSON.stringify(json)}`);
+
   // Handle both { data: { status, images } } and { data: [{ status, images }] }
   const inner = Array.isArray(json.data) ? json.data[0] : json.data;
+
+  // images may be under different keys: images / output / result / urls
+  const images =
+    inner?.images ??
+    inner?.output ??
+    inner?.result ??
+    inner?.urls ??
+    json.images ??
+    json.output ??
+    [];
+
   return {
     status: inner?.status ?? json.status ?? "unknown",
-    images: inner?.images ?? json.images ?? [],
+    images: Array.isArray(images) ? images : [images],
     error: inner?.error ?? json.error,
   };
 }
