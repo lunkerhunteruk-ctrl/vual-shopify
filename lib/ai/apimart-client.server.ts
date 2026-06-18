@@ -26,7 +26,7 @@ export interface ApimartSubmitParams {
 
 interface PollResult {
   status: "submitted" | "processing" | "completed" | "failed" | string;
-  images?: Array<{ url?: string; b64_json?: string }>;
+  imageUrls: string[]; // extracted flat list of CDN URLs
   error?: string;
 }
 
@@ -77,27 +77,25 @@ async function pollTask(taskId: string): Promise<PollResult> {
   }
 
   const json = await res.json();
-  // Log full response to diagnose structure
-  console.log(`[APIMart] Poll raw response: ${JSON.stringify(json)}`);
 
-  // Handle both { data: { status, images } } and { data: [{ status, images }] }
-  const inner = Array.isArray(json.data) ? json.data[0] : json.data;
+  // Correct structure: { data: { status, result: { images: [{ url: ["https://..."] }] } } }
+  const data = json.data;
+  const status: string = data?.status ?? json.status ?? "unknown";
 
-  // images may be under different keys: images / output / result / urls
-  const images =
-    inner?.images ??
-    inner?.output ??
-    inner?.result ??
-    inner?.urls ??
-    json.images ??
-    json.output ??
-    [];
+  // Extract all URLs: result.images[].url is itself an array of strings
+  const imageUrls: string[] = [];
+  for (const img of data?.result?.images ?? []) {
+    const urls: unknown = img.url;
+    if (Array.isArray(urls)) {
+      for (const u of urls) {
+        if (typeof u === "string" && u) imageUrls.push(u);
+      }
+    } else if (typeof urls === "string" && urls) {
+      imageUrls.push(urls);
+    }
+  }
 
-  return {
-    status: inner?.status ?? json.status ?? "unknown",
-    images: Array.isArray(images) ? images : [images],
-    error: inner?.error ?? json.error,
-  };
+  return { status, imageUrls, error: data?.error ?? json.error };
 }
 
 function sleep(ms: number): Promise<void> {
@@ -120,21 +118,17 @@ export async function generateImages(
     console.log(`[APIMart] Poll ${i + 1}/${MAX_POLL_ATTEMPTS}: ${result.status}`);
 
     if (result.status === "completed") {
-      const dataUrls: string[] = [];
-      for (const img of result.images ?? []) {
-        if (img.b64_json) {
-          dataUrls.push(`data:image/png;base64,${img.b64_json}`);
-        } else if (img.url) {
-          // Download the CDN image and convert to base64 data URL
-          const imgRes = await fetch(img.url);
-          const buf = await imgRes.arrayBuffer();
-          const b64 = Buffer.from(buf).toString("base64");
-          const ct = imgRes.headers.get("content-type") || "image/png";
-          dataUrls.push(`data:${ct};base64,${b64}`);
-        }
-      }
-      if (dataUrls.length === 0) {
+      if (result.imageUrls.length === 0) {
         throw new Error(`APIMart task completed but returned no images`);
+      }
+      // Download CDN images and convert to base64 data URLs
+      const dataUrls: string[] = [];
+      for (const url of result.imageUrls) {
+        const imgRes = await fetch(url);
+        const buf = await imgRes.arrayBuffer();
+        const b64 = Buffer.from(buf).toString("base64");
+        const ct = imgRes.headers.get("content-type") || "image/png";
+        dataUrls.push(`data:${ct};base64,${b64}`);
       }
       return dataUrls;
     }
