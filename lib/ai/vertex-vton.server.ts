@@ -72,11 +72,21 @@ function buildModelDesc(ms?: VTONModelSettings): string {
   return parts.join(" ");
 }
 
+function needsFullBody(categories: string[]): boolean {
+  return categories.some((c) =>
+    ["lower_body", "footwear", "dresses"].includes(c)
+  );
+}
+
 function buildCoordinatePrompt(
   categories: string[],
   imageCount: number,
   modelSettings?: VTONModelSettings
 ): string {
+  const fullBody = needsFullBody(categories);
+  const shotDesc = fullBody
+    ? "Full body shot showing the complete outfit including feet."
+    : "Half-body shot, waist up, clearly showing the upper garment(s). Do NOT show the lower body or feet.";
   const garmentDescs: string[] = [];
   for (let i = 0; i < categories.length; i++) {
     const label = categoryLabel(categories[i]);
@@ -120,7 +130,7 @@ function buildCoordinatePrompt(
     ``,
     `The result must show the person wearing ALL ${categories.length} items together as a complete coordinated outfit.`,
     `Studio white background, professional lighting.`,
-    `Full body shot showing the complete outfit including feet.`,
+    shotDesc,
     `High quality, 8K resolution, fashion magazine style.`,
     `CRITICAL: Generate EXACTLY ONE single person. Do NOT create collages, split views, or multiple copies.`,
     `CRITICAL: DO NOT render any text, labels, watermarks, or words on the image.`,
@@ -136,7 +146,10 @@ function buildSimplifiedCoordinatePrompt(
 ): string {
   const items = categories.map((c) => categoryLabel(c)).join(", ");
   const modelDesc = buildModelDesc(modelSettings);
-  return `Virtual try-on: Show the person from the first image wearing these items from the garment images: ${items}. Remove all original clothing the person is wearing — only the provided garments should be visible. ${modelDesc} Professional fashion photography, white background, full body. One person only, no collages. Garments must match the reference images exactly.`;
+  const shotDesc = needsFullBody(categories)
+    ? "full body"
+    : "half-body waist-up shot, do not show lower body";
+  return `Virtual try-on: Show the person from the first image wearing these items from the garment images: ${items}. Remove all original clothing the person is wearing — only the provided garments should be visible. ${modelDesc} Professional fashion photography, white background, ${shotDesc}. One person only, no collages. Garments must match the reference images exactly.`;
 }
 
 function buildMinimalCoordinatePrompt(
@@ -145,7 +158,8 @@ function buildMinimalCoordinatePrompt(
 ): string {
   const items = categories.map((c) => categoryLabel(c)).join(", ");
   const modelDesc = buildModelDesc(modelSettings);
-  return `Fashion photo: Person from image 1 wearing the ${items} from the other images. Remove all original clothing. ${modelDesc} White background, full body, one person.`;
+  const shotDesc = needsFullBody(categories) ? "full body" : "waist-up only";
+  return `Fashion photo: Person from image 1 wearing the ${items} from the other images. Remove all original clothing. ${modelDesc} White background, ${shotDesc}, one person.`;
 }
 
 // --- Jewelry VTON helpers ---
