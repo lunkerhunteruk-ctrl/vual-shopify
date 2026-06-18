@@ -585,10 +585,15 @@
       garmentInfo = '<div class="vf-selected-garments">';
       for (var i = 0; i < checked.length; i++) {
         garmentInfo +=
+          '<div class="vf-garment-thumb-wrap">' +
           '<div class="vf-selected-garment-thumb">' +
           '<img src="' +
           escapeHTML(checked[i].productImage) +
           '" alt="" class="vf-selected-garment-thumb__img" />' +
+          "</div>" +
+          '<button class="vf-garment-thumb__remove" data-action="remove-item" data-product-id="' +
+          escapeHTML(checked[i].productId) +
+          '" aria-label="Remove">×</button>' +
           "</div>";
       }
       garmentInfo +=
@@ -638,10 +643,15 @@
       garmentInfo = '<div class="vf-selected-garments vf-selected-garments--compact">';
       for (var i = 0; i < checked.length; i++) {
         garmentInfo +=
+          '<div class="vf-garment-thumb-wrap">' +
           '<div class="vf-selected-garment-thumb">' +
           '<img src="' +
           escapeHTML(checked[i].productImage) +
           '" alt="" class="vf-selected-garment-thumb__img" />' +
+          "</div>" +
+          '<button class="vf-garment-thumb__remove" data-action="remove-item" data-product-id="' +
+          escapeHTML(checked[i].productId) +
+          '" aria-label="Remove">×</button>' +
           "</div>";
       }
       garmentInfo += "</div>";
@@ -860,7 +870,7 @@
         });
       });
 
-    // Selection step — remove item
+    // Remove item (selection / upload / preview steps)
     modal
       .querySelectorAll('[data-action="remove-item"]')
       .forEach(function (el) {
@@ -868,6 +878,10 @@
           e.stopPropagation();
           var productId = el.dataset.productId;
           removeFromSelection(productId);
+          // If no checked items remain and we're not on selection, go back
+          if (getCheckedCount() === 0 && state.step !== "selection") {
+            state.step = "selection";
+          }
           renderModal();
         });
       });
