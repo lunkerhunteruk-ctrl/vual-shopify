@@ -261,7 +261,7 @@ export async function generateVTON(
       const images = await generateImages({
         prompt,
         size: vtonAspectRatio,
-        resolution: "2K",
+        resolution: "1K",
         image_urls: imageUrls,
       });
 
