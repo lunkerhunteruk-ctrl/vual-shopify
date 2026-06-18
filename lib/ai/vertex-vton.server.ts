@@ -6,7 +6,7 @@
 
 import { generateImages } from "./apimart-client.server";
 
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 1;
 
 export interface VTONModelSettings {
   gender?: string;
