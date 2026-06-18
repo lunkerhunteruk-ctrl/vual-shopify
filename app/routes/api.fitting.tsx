@@ -193,16 +193,10 @@ export async function action({ request }: ActionFunctionArgs) {
       modelSettings: body.modelSettings,
     });
 
-    // Add watermark with shop name
-    const watermarkedImage = await addWatermark(
-      result.resultImage,
-      shopDomain.replace(".myshopify.com", "")
-    );
-
     return json(
       {
         success: true,
-        resultImage: watermarkedImage,
+        resultImage: result.resultImage,
         processingTime: result.processingTime,
         dailyRemaining: dailyLimit.remaining - 1,
         dailyLimit: dailyLimit.limit,
