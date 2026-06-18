@@ -1,10 +1,10 @@
 /**
- * VUAL Studio — Gemini Image Generation Engine
- * Ported from VUAL platform: app/api/ai/gemini-image/route.ts
+ * VUAL Studio — Image Generation Engine
+ * Backed by APIMart (gemini-3.1-flash-image-preview via nano-banana-2)
  */
 
-const GEMINI_MODEL = "gemini-3.1-flash-image-preview";
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+import { generateImages } from "./apimart-client.server";
+
 const MAX_RETRIES = 3;
 
 // --- Types ---
@@ -105,54 +105,6 @@ function extractBase64(dataUrl: string): {
     return { mimeType: match[1], data: match[2] };
   }
   return null;
-}
-
-async function callGeminiAPI(
-  parts: any[],
-  aspectRatio: string = "3:4",
-  imageSize: string = "2K"
-): Promise<any> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is not configured");
-  }
-
-  const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts }],
-      generationConfig: {
-        responseModalities: ["TEXT", "IMAGE"],
-        imageConfig: { aspectRatio, imageSize },
-      },
-      safetySettings: [
-        {
-          category: "HARM_CATEGORY_HARASSMENT",
-          threshold: "BLOCK_NONE",
-        },
-        {
-          category: "HARM_CATEGORY_HATE_SPEECH",
-          threshold: "BLOCK_NONE",
-        },
-        {
-          category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-          threshold: "BLOCK_NONE",
-        },
-        {
-          category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-          threshold: "BLOCK_NONE",
-        },
-      ],
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
-  }
-
-  return response.json();
 }
 
 // --- Prompt builders ---
@@ -510,7 +462,10 @@ export async function generateImage(
         buildMinimalPrompt(req),
       ];
 
-  const imageSize = "2K";
+  // Collect image_urls for APIMart (base64 data URIs passed directly)
+  const imageUrls: string[] = imageParts
+    .filter((p) => p.inline_data)
+    .map((p) => `data:${p.inline_data.mime_type};base64,${p.inline_data.data}`);
 
   let lastError: Error | null = null;
 
@@ -519,54 +474,23 @@ export async function generateImage(
       const prompt =
         promptVariants[attempt] || promptVariants[promptVariants.length - 1];
       console.log(
-        `[VUAL Studio] Attempt ${attempt + 1}/${MAX_RETRIES} using ${GEMINI_MODEL}${jewelry ? " (jewelry)" : ""}...`
+        `[VUAL Studio] Attempt ${attempt + 1}/${MAX_RETRIES} via APIMart${jewelry ? " (jewelry)" : ""}...`
       );
 
-      const parts = [{ text: prompt }, ...imageParts];
-      const data = await callGeminiAPI(parts, req.aspectRatio, imageSize);
-
-      const candidates = data.candidates || [];
-      const finishReason = candidates[0]?.finishReason;
-
-      if (finishReason === "IMAGE_PROHIBITED_CONTENT") {
-        lastError = new Error(
-          `IMAGE_PROHIBITED_CONTENT on attempt ${attempt + 1}`
-        );
-        if (attempt + 1 < MAX_RETRIES) {
-          await new Promise((r) => setTimeout(r, 1000));
-        }
-        continue;
-      }
-
-      // Extract generated images
-      const images: string[] = [];
-      for (const candidate of candidates) {
-        const responseParts = candidate.content?.parts || [];
-        for (const part of responseParts) {
-          const inlineData = part.inline_data || part.inlineData;
-          if (inlineData?.data) {
-            const base64 = inlineData.data;
-            const mimeType =
-              inlineData.mime_type || inlineData.mimeType || "image/png";
-            images.push(`data:${mimeType};base64,${base64}`);
-          }
-        }
-      }
-
-      if (images.length === 0) {
-        lastError = new Error(
-          `No image in response. finishReason=${finishReason}`
-        );
-        if (attempt + 1 < MAX_RETRIES) {
-          await new Promise((r) => setTimeout(r, 1000));
-        }
-        continue;
-      }
+      const images = await generateImages({
+        prompt,
+        size: req.aspectRatio,
+        resolution: "2K",
+        ...(imageUrls.length ? { image_urls: imageUrls } : {}),
+      });
 
       return { success: true, images, prompt };
     } catch (error) {
       console.error(`[VUAL Studio] Attempt ${attempt + 1} error:`, error);
       lastError = error as Error;
+      if (attempt + 1 < MAX_RETRIES) {
+        await new Promise((r) => setTimeout(r, 2000));
+      }
     }
   }
 

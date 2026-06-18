@@ -1,11 +1,11 @@
 /**
  * VUAL Fitting — Virtual Try-On Engine
- * Uses Gemini 3.1 Flash Image Preview for garment try-on generation
+ * Backed by APIMart (gemini-3.1-flash-image-preview via nano-banana-2)
  * Supports coordinate try-on: multiple garments in a single generation
  */
 
-const GEMINI_MODEL = "gemini-3.1-flash-image-preview";
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+import { generateImages } from "./apimart-client.server";
+
 const MAX_RETRIES = 3;
 
 export interface VTONModelSettings {
@@ -26,73 +26,12 @@ export interface VTONResponse {
   processingTime: number;
 }
 
-function extractBase64(dataUrl: string): {
-  data: string;
-  mimeType: string;
-} | null {
-  const match = dataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
-  if (match) {
-    return { mimeType: match[1], data: match[2] };
-  }
-  // Raw base64 without data URL prefix
-  if (!dataUrl.startsWith("data:") && dataUrl.length > 100) {
-    return { mimeType: "image/jpeg", data: dataUrl };
-  }
+function toDataUrl(dataUrl: string): string | null {
+  // Already a data URI
+  if (dataUrl.startsWith("data:")) return dataUrl;
+  // Raw base64 — assume JPEG
+  if (dataUrl.length > 100) return `data:image/jpeg;base64,${dataUrl}`;
   return null;
-}
-
-async function callGeminiImageAPI(
-  parts: any[],
-  aspectRatio: string = "3:4",
-  imageSize: string = "1K"
-): Promise<any> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is not configured");
-  }
-
-  const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts }],
-      generationConfig: {
-        responseModalities: ["TEXT", "IMAGE"],
-        imageConfig: {
-          aspectRatio,
-          imageSize,
-        },
-      },
-      safetySettings: [
-        {
-          category: "HARM_CATEGORY_HARASSMENT",
-          threshold: "BLOCK_NONE",
-        },
-        {
-          category: "HARM_CATEGORY_HATE_SPEECH",
-          threshold: "BLOCK_NONE",
-        },
-        {
-          category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-          threshold: "BLOCK_NONE",
-        },
-        {
-          category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-          threshold: "BLOCK_NONE",
-        },
-      ],
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("[Gemini API] Error response:", errorText);
-    throw new Error(
-      `Gemini API error: ${response.status} ${response.statusText} - ${errorText}`
-    );
-  }
-
-  return response.json();
 }
 
 function categoryLabel(cat: string): string {
@@ -273,33 +212,22 @@ export async function generateVTON(
     throw new Error("At least one garment image is required");
   }
 
-  // Build image parts: person first, then all garments
-  const imageParts: any[] = [];
+  // Build image_urls: person first, then all garments
+  const imageUrls: string[] = [];
 
-  // Person image
-  const personData = extractBase64(request.personImage);
-  if (!personData) {
-    throw new Error("Invalid person image data");
-  }
-  imageParts.push({
-    inline_data: { mime_type: personData.mimeType, data: personData.data },
-  });
+  const personUrl = toDataUrl(request.personImage);
+  if (!personUrl) throw new Error("Invalid person image data");
+  imageUrls.push(personUrl);
 
-  // All garment images
   for (const garmentImg of request.garmentImages) {
-    const garmentData = extractBase64(garmentImg);
-    if (garmentData) {
-      imageParts.push({
-        inline_data: {
-          mime_type: garmentData.mimeType,
-          data: garmentData.data,
-        },
-      });
-    }
+    const url = toDataUrl(garmentImg);
+    if (url) imageUrls.push(url);
   }
 
   // Detect jewelry mode from first category
-  const jewelry = request.categories.length > 0 && isJewelryCategory(request.categories[0]);
+  const jewelry =
+    request.categories.length > 0 &&
+    isJewelryCategory(request.categories[0]);
   const jewelryCat = jewelry ? request.categories[0] : "";
 
   const promptVariants = jewelry
@@ -309,14 +237,16 @@ export async function generateVTON(
         buildMinimalJewelryVTONPrompt(jewelryCat),
       ]
     : [
-        buildCoordinatePrompt(request.categories, request.garmentImages.length, request.modelSettings),
+        buildCoordinatePrompt(
+          request.categories,
+          request.garmentImages.length,
+          request.modelSettings
+        ),
         buildSimplifiedCoordinatePrompt(request.categories, request.modelSettings),
         buildMinimalCoordinatePrompt(request.categories, request.modelSettings),
       ];
 
-  // Jewelry: 1:1 aspect; Fashion: 3:4
   const vtonAspectRatio = jewelry ? "1:1" : "3:4";
-  const vtonImageSize = "2K";
 
   let lastError: Error | null = null;
 
@@ -325,56 +255,29 @@ export async function generateVTON(
       const prompt =
         promptVariants[attempt] || promptVariants[promptVariants.length - 1];
       console.log(
-        `[VTON] Attempt ${attempt + 1}/${MAX_RETRIES}, ${request.garmentImages.length} item(s)${jewelry ? " (jewelry)" : ""}...`
+        `[VTON] Attempt ${attempt + 1}/${MAX_RETRIES} via APIMart, ${request.garmentImages.length} item(s)${jewelry ? " (jewelry)" : ""}...`
       );
 
-      const parts = [{ text: prompt }, ...imageParts];
-      const data = await callGeminiImageAPI(parts, vtonAspectRatio, vtonImageSize);
+      const images = await generateImages({
+        prompt,
+        size: vtonAspectRatio,
+        resolution: "2K",
+        image_urls: imageUrls,
+      });
+
       const processingTime = Date.now() - startTime;
-
-      const candidates = data.candidates || [];
-      const finishReason = candidates[0]?.finishReason;
-
-      if (finishReason === "IMAGE_PROHIBITED_CONTENT") {
-        console.log(
-          `[VTON] Content filter on attempt ${attempt + 1}, ${attempt + 1 < MAX_RETRIES ? "retrying..." : "no more retries"}`
-        );
-        lastError = new Error(
-          `IMAGE_PROHIBITED_CONTENT on attempt ${attempt + 1}`
-        );
-        if (attempt + 1 < MAX_RETRIES) {
-          await new Promise((r) => setTimeout(r, 1000));
-        }
-        continue;
-      }
-
-      // Extract generated image
-      for (const candidate of candidates) {
-        const responseParts = candidate.content?.parts || [];
-        for (const part of responseParts) {
-          const inlineData = part.inline_data || part.inlineData;
-          if (inlineData?.data) {
-            const base64 = inlineData.data;
-            const mimeType =
-              inlineData.mime_type || inlineData.mimeType || "image/png";
-            console.log(
-              `[VTON] Success on attempt ${attempt + 1}, mimeType: ${mimeType}, size: ${base64.length}`
-            );
-            return {
-              resultImage: `data:${mimeType};base64,${base64}`,
-              confidence: 0.9,
-              processingTime,
-            };
-          }
-        }
-      }
-
-      lastError = new Error(
-        `No image in response. finishReason=${finishReason}`
-      );
+      console.log(`[VTON] Success on attempt ${attempt + 1}`);
+      return {
+        resultImage: images[0],
+        confidence: 0.9,
+        processingTime,
+      };
     } catch (error) {
       console.error(`[VTON] Attempt ${attempt + 1} error:`, error);
       lastError = error as Error;
+      if (attempt + 1 < MAX_RETRIES) {
+        await new Promise((r) => setTimeout(r, 2000));
+      }
     }
   }
 
