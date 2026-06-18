@@ -40,8 +40,11 @@
       selectionHint: "Select items to try on together",
       removeItem: "Remove",
       uploadTitle: "Upload Your Photo",
+      uploadTitleFootwear: "Upload a Photo of Your Feet",
       uploadDesc:
         "Take or upload a full-body photo to see how these items look on you.",
+      uploadDescFootwear:
+        "Take or upload a close-up photo of your feet to see how these shoes look on you.",
       uploadDescJewelryRing:
         "Take or upload a close-up photo of your hand to see how this ring looks.",
       uploadDescJewelryNecklace:
@@ -54,6 +57,12 @@
         "Stand facing the camera",
         "Show your upper body",
         "Use a plain background",
+        "Good lighting helps",
+      ],
+      tipsFootwear: [
+        "Close-up of your feet and ankles",
+        "Natural standing position",
+        "Plain background works best",
         "Good lighting helps",
       ],
       tipsJewelry: [
@@ -105,8 +114,11 @@
       selectionHint: "一緒に試着したいアイテムを選んでください",
       removeItem: "削除",
       uploadTitle: "写真をアップロード",
+      uploadTitleFootwear: "足元の写真をアップロード",
       uploadDesc:
         "全身写真を撮影またはアップロードして、着用イメージをご確認ください。",
+      uploadDescFootwear:
+        "足元のクローズアップ写真を撮影またはアップロードして、シューズの着用イメージをご確認ください。",
       uploadDescJewelryRing:
         "手のクローズアップ写真を撮影またはアップロードして、リングの着用イメージをご確認ください。",
       uploadDescJewelryNecklace:
@@ -118,6 +130,12 @@
       tips: [
         "正面を向いて立ってください",
         "上半身が写るようにしてください",
+        "シンプルな背景がベストです",
+        "明るい場所で撮影してください",
+      ],
+      tipsFootwear: [
+        "足元・足首のクローズアップ",
+        "自然に立った状態で",
         "シンプルな背景がベストです",
         "明るい場所で撮影してください",
       ],
@@ -507,7 +525,21 @@
     return isJewelryCategory(cat) ? cat : null;
   }
 
+  function isFootwearOnly() {
+    var checked = getCheckedItems();
+    if (checked.length === 0) return false;
+    return checked.every(function (item) {
+      return item.category === "footwear";
+    });
+  }
+
+  function getUploadTitle() {
+    if (isFootwearOnly()) return t("uploadTitleFootwear");
+    return t("uploadTitle");
+  }
+
   function getUploadDesc() {
+    if (isFootwearOnly()) return t("uploadDescFootwear");
     var jCat = getJewelryMode();
     if (jCat === "jewelry_ring") return t("uploadDescJewelryRing");
     if (jCat === "jewelry_necklace") return t("uploadDescJewelryNecklace");
@@ -519,7 +551,8 @@
   function uploadStepHTML() {
     var saved = getSavedPortrait();
     var jMode = getJewelryMode();
-    var tipsList = jMode ? t("tipsJewelry") : t("tips");
+    var fwOnly = isFootwearOnly();
+    var tipsList = fwOnly ? t("tipsFootwear") : jMode ? t("tipsJewelry") : t("tips");
     var tipsHTML = tipsList
       .map(function (tip) {
         return "<li>" + escapeHTML(tip) + "</li>";
@@ -567,7 +600,7 @@
     }
 
     return (
-      headerHTML(t("uploadTitle")) +
+      headerHTML(getUploadTitle()) +
       '<div class="vf-body">' +
       garmentInfo +
       '<p class="vf-desc">' +

@@ -78,6 +78,35 @@ function needsFullBody(categories: string[]): boolean {
   );
 }
 
+function isFootwearOnly(categories: string[]): boolean {
+  return categories.length > 0 && categories.every((c) => c === "footwear");
+}
+
+function buildFootwearVTONPrompt(): string {
+  return [
+    `CRITICAL — SHOE FIDELITY IS THE TOP PRIORITY:`,
+    `Reproduce the EXACT shoes from the reference image with 100% accuracy.`,
+    `Preserve exact color, material, sole design, stitching, and all details.`,
+    ``,
+    `Virtual try-on: The FIRST image shows the customer's feet.`,
+    `Place the shoes from the SECOND image naturally on their feet.`,
+    `Close-up shot focused on the feet and ankles — do NOT show full body.`,
+    `Clean, neutral background. Sharp focus on the shoes.`,
+    `Professional shoe photography quality, eye-level angle.`,
+    `CRITICAL: Show ONLY the feet and lower ankle area — close-up, NOT full body.`,
+    `CRITICAL: DO NOT render any text, labels, or watermarks.`,
+    `CRITICAL: Generate ONE single close-up shot. No collages or split views.`,
+  ].filter(Boolean).join(" ");
+}
+
+function buildSimplifiedFootwearVTONPrompt(): string {
+  return `Virtual try-on: Place the shoes from image 2 on the feet from image 1. Close-up of feet and ankles, sharp focus on shoes, clean background. One image only, no collages.`;
+}
+
+function buildMinimalFootwearVTONPrompt(): string {
+  return `Photo: shoes from image 2 on the feet from image 1. Close-up, clean background.`;
+}
+
 function buildCoordinatePrompt(
   categories: string[],
   imageCount: number,
@@ -238,13 +267,20 @@ export async function generateVTON(
     if (url) imageUrls.push(url);
   }
 
-  // Detect jewelry mode from first category
+  // Detect mode from categories
   const jewelry =
     request.categories.length > 0 &&
     isJewelryCategory(request.categories[0]);
   const jewelryCat = jewelry ? request.categories[0] : "";
+  const fwOnly = isFootwearOnly(request.categories);
 
-  const promptVariants = jewelry
+  const promptVariants = fwOnly
+    ? [
+        buildFootwearVTONPrompt(),
+        buildSimplifiedFootwearVTONPrompt(),
+        buildMinimalFootwearVTONPrompt(),
+      ]
+    : jewelry
     ? [
         buildJewelryVTONPrompt(jewelryCat, request.modelSettings),
         buildSimplifiedJewelryVTONPrompt(jewelryCat, request.modelSettings),
@@ -260,7 +296,7 @@ export async function generateVTON(
         buildMinimalCoordinatePrompt(request.categories, request.modelSettings),
       ];
 
-  const vtonAspectRatio = jewelry ? "1:1" : "3:4";
+  const vtonAspectRatio = fwOnly ? "1:1" : jewelry ? "1:1" : "3:4";
 
   let lastError: Error | null = null;
 
