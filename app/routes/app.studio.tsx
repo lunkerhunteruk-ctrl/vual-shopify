@@ -1388,7 +1388,7 @@ export default function StudioPage() {
                     value={customPrompt}
                     onChange={setCustomPrompt}
                     multiline={3}
-                    maxLength={500}
+                    maxLength={5000}
                     showCharacterCount
                     placeholder="e.g., casual street style, holding a coffee cup"
                     autoComplete="off"
