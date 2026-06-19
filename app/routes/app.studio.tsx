@@ -389,6 +389,15 @@ const poseOptions = [
   { label: "Custom (use prompt)", value: "custom" },
 ];
 
+const GEN_STEPS = [
+  "Selecting your garments",
+  "Combining the outfit",
+  "Building the scene",
+  "Positioning the model",
+  "Setting the lighting",
+  "Developing the film",
+];
+
 const backgroundOptions = [
   { label: "Studio White", value: "studioWhite" },
   { label: "Studio Gray", value: "studioGray" },
@@ -521,6 +530,7 @@ export default function StudioPage() {
   const [showResultModal, setShowResultModal] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const lastFetcherDataRef = useRef<any>(null);
+  const [genStep, setGenStep] = useState(0);
 
   // Review prompt state
   const [showReviewBanner, setShowReviewBanner] = useState(false);
@@ -536,6 +546,16 @@ export default function StudioPage() {
   const isSaving =
     fetcher.state !== "idle" &&
     fetcher.formData?.get("intent") === "saveToProduct";
+
+  // Cycle through generation steps while generating
+  useEffect(() => {
+    if (!isGenerating) { setGenStep(0); return; }
+    setGenStep(0);
+    const iv = setInterval(() => {
+      setGenStep((prev) => Math.min(prev + 1, GEN_STEPS.length - 1));
+    }, 5500);
+    return () => clearInterval(iv);
+  }, [isGenerating]);
 
   // Filter models based on current settings
   const filteredModels = modelDatabase?.models.filter(
@@ -1044,9 +1064,27 @@ export default function StudioPage() {
                     <button onClick={() => setShowResultModal(false)} style={{ background: "none", border: "none", fontSize: "24px", cursor: "pointer", color: "#666", padding: "4px 8px" }}>&times;</button>
                   </div>
                   {isGenerating && generatedImages.length === 0 && (
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "48px 24px", gap: "20px" }}>
-                      <Spinner size="large" />
-                      <Text as="p" variant="bodyMd" tone="subdued">Generating your look — this usually takes 20–40 seconds</Text>
+                    <div style={{ padding: "32px 16px 40px" }}>
+                      {GEN_STEPS.map((step, i) => {
+                        const done = i < genStep;
+                        const active = i === genStep;
+                        return (
+                          <div key={i} style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "20px", opacity: i > genStep ? 0.28 : 1, transition: "opacity 0.6s ease" }}>
+                            <div style={{ width: "28px", height: "28px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", background: done ? "#16a34a" : active ? "#111" : "#e5e7eb", transition: "background 0.5s ease" }}>
+                              {done ? (
+                                <span style={{ color: "#fff", fontSize: "14px", lineHeight: 1 }}>✓</span>
+                              ) : active ? (
+                                <Spinner size="small" />
+                              ) : (
+                                <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#9ca3af", display: "block" }} />
+                              )}
+                            </div>
+                            <span style={{ fontSize: "15px", fontWeight: active ? 600 : 400, color: done ? "#16a34a" : active ? "#111" : "#9ca3af", transition: "color 0.5s ease, font-weight 0.3s ease" }}>
+                              {step}{active ? "..." : done ? "" : ""}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                   {generationError && generatedImages.length === 0 && (
