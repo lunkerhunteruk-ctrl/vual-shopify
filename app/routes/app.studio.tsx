@@ -1061,7 +1061,23 @@ export default function StudioPage() {
                 <div style={{ position: "relative", background: "#fff", borderRadius: "16px", maxWidth: "720px", width: "90vw", maxHeight: "90vh", overflow: "hidden", padding: "24px", display: "flex", flexDirection: "column" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
                     <Text as="h2" variant="headingMd">{isGenerating && generatedImages.length === 0 ? "Creating Look..." : "Generated Look"}</Text>
-                    <button onClick={() => setShowResultModal(false)} style={{ background: "none", border: "none", fontSize: "24px", cursor: "pointer", color: "#666", padding: "4px 8px" }}>&times;</button>
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                      {generatedImages.length > 0 && (
+                        <button
+                          title="Download"
+                          onClick={() => {
+                            const src = (selectedFilter !== "none" && filteredImages[`0-${selectedFilter}`]) || generatedImages[0];
+                            const ext = src.startsWith("data:image/jpeg") ? "jpg" : "png";
+                            fetch(src).then(r => r.blob()).then(blob => { const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `vual-studio-${Date.now()}.${ext}`; a.click(); URL.revokeObjectURL(url); });
+                          }}
+                          style={{ background: "none", border: "1px solid #ddd", borderRadius: "6px", cursor: "pointer", color: "#444", padding: "5px 10px", fontSize: "13px", display: "flex", alignItems: "center", gap: "5px" }}
+                        >
+                          <svg width="13" height="13" viewBox="0 0 13 13" fill="currentColor"><path d="M6.5 9.5L2 5h3V1h3v4h3L6.5 9.5z"/><rect x="1" y="11" width="11" height="1.5" rx="0.75"/></svg>
+                          Download
+                        </button>
+                      )}
+                      <button onClick={() => setShowResultModal(false)} style={{ background: "none", border: "none", fontSize: "24px", cursor: "pointer", color: "#666", padding: "4px 8px" }}>&times;</button>
+                    </div>
                   </div>
                   {isGenerating && generatedImages.length === 0 && (
                     <div style={{ padding: "32px 16px 40px" }}>
@@ -1168,11 +1184,6 @@ export default function StudioPage() {
                           })}
                         </InlineStack>
 
-                        <InlineStack gap="200">
-                          <Button onClick={() => { const src = displayImg; const ext = src.startsWith("data:image/jpeg") ? "jpg" : "png"; fetch(src).then(r => r.blob()).then(blob => { const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `vual-studio-${Date.now()}.${ext}`; link.click(); URL.revokeObjectURL(url); }); }} size="slim">
-                            Download
-                          </Button>
-                        </InlineStack>
                         {selectedProductData.length > 0 && (
                           <BlockStack gap="300">
                             <Button variant="primary" fullWidth onClick={() => handleSaveAllAndCollection(displayImg)} loading={fetcher.state !== "idle" && fetcher.formData?.get("intent") === "saveAllAndCollection"}>
