@@ -28,6 +28,8 @@ import { fetchProducts } from "../../lib/shopify/products.server";
 import { generateImage } from "../../lib/ai/gemini-image.server";
 import { uploadImageToProduct } from "../../lib/shopify/images.server";
 import { getCreditStatus, consumeCredit } from "../../lib/billing/credit-tracker.server";
+import { detectLocale } from "../lib/i18n";
+import type { Locale } from "../lib/i18n";
 import type { FilterId } from "../lib/photo-filters";
 const FILTERS: { id: FilterId; label: string }[] = [
   { id: "none", label: "Original" },
@@ -86,7 +88,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     console.error("Failed to load model database:", e);
   }
 
-  return json({ products, pageInfo, modelDatabase, creditStatus, shopDomain: session.shop });
+  const locale = detectLocale(request);
+  return json({ products, pageInfo, modelDatabase, creditStatus, shopDomain: session.shop, locale });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -432,7 +435,7 @@ const aspectRatioOptions = [
 ];
 
 export default function StudioPage() {
-  const { products: initialProducts, pageInfo: initialPageInfo, modelDatabase, creditStatus, shopDomain } =
+  const { products: initialProducts, pageInfo: initialPageInfo, modelDatabase, creditStatus, shopDomain, locale } =
     useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const shopify = useAppBridge();

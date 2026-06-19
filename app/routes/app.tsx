@@ -6,15 +6,18 @@ import { NavMenu } from "@shopify/app-bridge-react";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 
 import { authenticate } from "../shopify.server";
+import { detectLocale } from "../lib/i18n";
 
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
+  const locale = detectLocale(request);
 
   return {
     apiKey: process.env.SHOPIFY_API_KEY || "",
     isAdmin: session.shop === "vual-dev.myshopify.com",
+    locale,
   };
 };
 

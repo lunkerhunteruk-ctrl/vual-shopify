@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { detectLocale } from "../lib/i18n";
+import type { Locale } from "../lib/i18n";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData, useFetcher } from "@remix-run/react";
@@ -61,6 +63,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     currentPlanName,
     dailyCustomerLimit: shopSubscription?.daily_customer_limit ?? 5,
     fittingEnabled: shopSubscription?.fitting_enabled ?? true,
+    locale: detectLocale(request),
   });
 };
 
@@ -143,6 +146,7 @@ export default function BillingPage() {
     currentPlanName,
     dailyCustomerLimit,
     fittingEnabled,
+    locale,
   } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const shopify = useAppBridge();
