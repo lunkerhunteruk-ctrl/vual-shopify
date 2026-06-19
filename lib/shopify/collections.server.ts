@@ -107,9 +107,6 @@ export async function createCollection(
       return { success: false, error: "Collection created but no ID returned" };
     }
 
-    // Publish to Online Store so it appears in theme editor
-    await publishToOnlineStore(admin, collection.id);
-
     return {
       success: true,
       collectionId: collection.id,
@@ -120,6 +117,31 @@ export async function createCollection(
       success: false,
       error: error instanceof Error ? error.message : "Collection creation failed",
     };
+  }
+}
+
+/**
+ * Delete a collection by GID
+ */
+export async function deleteCollection(
+  admin: AdminApiContext,
+  collectionId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await admin.graphql(
+      `mutation collectionDelete($input: CollectionDeleteInput!) {
+        collectionDelete(input: $input) {
+          deletedCollectionId
+          userErrors { field message }
+        }
+      }`,
+      { variables: { input: { id: collectionId } } }
+    );
+    const data = await res.json();
+    const errors = data.data?.collectionDelete?.userErrors || [];
+    return { success: errors.length === 0 };
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : "Delete failed" };
   }
 }
 

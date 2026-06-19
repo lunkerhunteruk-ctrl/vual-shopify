@@ -86,7 +86,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     console.error("Failed to load model database:", e);
   }
 
-  return json({ products, pageInfo, modelDatabase, creditStatus });
+  return json({ products, pageInfo, modelDatabase, creditStatus, shopDomain: session.shop });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -377,6 +377,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     });
   }
 
+  if (intent === "discard") {
+    const collectionId = formData.get("collectionId") as string;
+    const { deleteCollection } = await import("../../lib/shopify/collections.server");
+    const result = await deleteCollection(admin, collectionId);
+    return json({ type: "discard", ...result });
+  }
+
   return json({ error: "Unknown intent" }, { status: 400 });
 };
 
@@ -425,7 +432,7 @@ const aspectRatioOptions = [
 ];
 
 export default function StudioPage() {
-  const { products: initialProducts, pageInfo: initialPageInfo, modelDatabase, creditStatus } =
+  const { products: initialProducts, pageInfo: initialPageInfo, modelDatabase, creditStatus, shopDomain } =
     useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const shopify = useAppBridge();
@@ -531,6 +538,11 @@ export default function StudioPage() {
   const [generationError, setGenerationError] = useState<string | null>(null);
   const lastFetcherDataRef = useRef<any>(null);
   const [genStep, setGenStep] = useState(0);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [autoSaveData, setAutoSaveData] = useState<{ collectionId: string; handle: string; title: string } | null>(null);
+  const selectedProductsRef = useRef<string[]>([]);
+  const selectedProductDataRef = useRef<any[]>([]);
+  const selectedModelIdRef = useRef<string | null>(null);
 
   // Review prompt state
   const [showReviewBanner, setShowReviewBanner] = useState(false);
@@ -546,6 +558,11 @@ export default function StudioPage() {
   const isSaving =
     fetcher.state !== "idle" &&
     fetcher.formData?.get("intent") === "saveToProduct";
+
+  // Keep refs in sync for use inside fetcher useEffect
+  useEffect(() => { selectedProductsRef.current = selectedProducts; });
+  useEffect(() => { selectedProductDataRef.current = selectedProductData; });
+  useEffect(() => { selectedModelIdRef.current = selectedModelId; });
 
   // Cycle through generation steps while generating
   useEffect(() => {
@@ -621,6 +638,28 @@ export default function StudioPage() {
         }
         const overageNote = data.isOverage ? " (overage)" : "";
         shopify.toast.show(`Image generated successfully!${overageNote}`);
+
+        // Auto-save: submit saveAllAndCollection immediately
+        const base64Match = data.images[0].match(/^data:image\/\w+;base64,(.+)$/);
+        if (base64Match && selectedProductsRef.current.length > 0) {
+          setAutoSaveStatus("saving");
+          setAutoSaveData(null);
+          const saveForm = new FormData();
+          saveForm.set("intent", "saveAllAndCollection");
+          saveForm.set("productIds", JSON.stringify(selectedProductsRef.current));
+          saveForm.set("imageBase64", base64Match[1]);
+          saveForm.set("productInfo", JSON.stringify(
+            selectedProductDataRef.current.map((p: any) => ({
+              title: p.title,
+              description: p.description || "",
+              productType: p.productType,
+              vendor: p.vendor,
+            }))
+          ));
+          if (selectedModelIdRef.current) saveForm.set("modelId", selectedModelIdRef.current);
+          fetcher.submit(saveForm, { method: "POST" });
+        }
+
         // Track generation count for review prompt
         try {
           const count = parseInt(localStorage.getItem("vual_gen_count") || "0", 10) + 1;
@@ -639,9 +678,21 @@ export default function StudioPage() {
       shopify.toast.show("Image saved to product!");
     }
     if (data.type === "saveAll") {
-      const msg = `Saved to ${data.uploadCount}/${data.totalProducts} products` +
-        (data.collection?.success ? ` + Collection "${data.generatedTitle || data.collection.handle}" created!` : "");
-      shopify.toast.show(msg);
+      if (data.collection?.success) {
+        setAutoSaveStatus("saved");
+        setAutoSaveData({
+          collectionId: data.collection.collectionId,
+          handle: data.collection.handle,
+          title: data.generatedTitle || data.collection.handle,
+        });
+      } else {
+        setAutoSaveStatus("error");
+      }
+    }
+    if (data.type === "discard" && data.success) {
+      setAutoSaveData(null);
+      setAutoSaveStatus("idle");
+      shopify.toast.show("Draft collection discarded.");
     }
   }, [fetcher.data, shopify]);
 
@@ -701,6 +752,8 @@ export default function StudioPage() {
 
     setGenerationError(null);
     setGeneratedImages([]);
+    setAutoSaveStatus("idle");
+    setAutoSaveData(null);
     setShowResultModal(true);
     fetcher.submit(formData, { method: "POST" });
   }, [
@@ -1184,19 +1237,47 @@ export default function StudioPage() {
                           })}
                         </InlineStack>
 
-                        {selectedProductData.length > 0 && (
-                          <BlockStack gap="300">
-                            <Button variant="primary" fullWidth onClick={() => handleSaveAllAndCollection(displayImg)} loading={fetcher.state !== "idle" && fetcher.formData?.get("intent") === "saveAllAndCollection"}>
-                              Save to All Products + Create Collection
-                            </Button>
-                            <InlineStack gap="200" wrap>
-                              {selectedProductData.map((p) => (
-                                <Button key={p.id} onClick={() => handleSaveToProduct(displayImg, p.id)} loading={isSaving} size="slim">
-                                  Save to {p.title}
-                                </Button>
-                              ))}
-                            </InlineStack>
-                          </BlockStack>
+                        {/* Auto-save status */}
+                        {autoSaveStatus === "saving" && (
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", borderRadius: "8px", background: "#f5f5f5" }}>
+                            <Spinner size="small" />
+                            <Text as="p" variant="bodySm" tone="subdued">Saving draft collection...</Text>
+                          </div>
+                        )}
+                        {autoSaveStatus === "saved" && autoSaveData && (
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderRadius: "8px", background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <span style={{ color: "#16a34a", fontSize: "15px" }}>✓</span>
+                              <div>
+                                <Text as="p" variant="bodySm">Draft collection created — publish from Products › Collections</Text>
+                                <Text as="p" variant="bodySm" tone="subdued">{autoSaveData.title}</Text>
+                              </div>
+                            </div>
+                            <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+                              <a
+                                href={`https://${shopDomain}/admin/collections/${autoSaveData.collectionId.split("/").pop()}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{ fontSize: "13px", color: "#2563eb", textDecoration: "none", padding: "4px 0" }}
+                              >
+                                Open →
+                              </a>
+                              <button
+                                onClick={() => {
+                                  const discardForm = new FormData();
+                                  discardForm.set("intent", "discard");
+                                  discardForm.set("collectionId", autoSaveData.collectionId);
+                                  fetcher.submit(discardForm, { method: "POST" });
+                                }}
+                                style={{ fontSize: "13px", color: "#dc2626", background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}
+                              >
+                                Discard
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                        {autoSaveStatus === "error" && (
+                          <Banner tone="critical">Failed to save draft collection.</Banner>
                         )}
                       </BlockStack>
                       );
