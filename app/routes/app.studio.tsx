@@ -673,6 +673,7 @@ export default function StudioPage() {
             }))
           ));
           if (selectedModelIdRef.current) saveForm.set("modelId", selectedModelIdRef.current);
+          saveForm.set("shopLocale", locale);
           fetcher.submit(saveForm, { method: "POST" });
         }
 
