@@ -20,6 +20,7 @@ import {
   Banner,
   Box,
   Divider,
+  Spinner,
 } from "@shopify/polaris";
 import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
@@ -680,6 +681,7 @@ export default function StudioPage() {
 
     setGenerationError(null);
     setGeneratedImages([]);
+    setShowResultModal(true);
     fetcher.submit(formData, { method: "POST" });
   }, [
     selectedProductData,
@@ -1033,15 +1035,31 @@ export default function StudioPage() {
             </Card>
 
             {/* Generated Images Modal */}
-            {showResultModal && generatedImages.length > 0 && (
+            {showResultModal && (
               <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)" }} onClick={() => setShowResultModal(false)} />
+                <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)" }} onClick={() => { if (!isGenerating) setShowResultModal(false); }} />
                 <div style={{ position: "relative", background: "#fff", borderRadius: "16px", maxWidth: "720px", width: "90vw", maxHeight: "90vh", overflow: "hidden", padding: "24px", display: "flex", flexDirection: "column" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                    <Text as="h2" variant="headingMd">Generated Look</Text>
+                    <Text as="h2" variant="headingMd">{isGenerating && generatedImages.length === 0 ? "Creating Look..." : "Generated Look"}</Text>
                     <button onClick={() => setShowResultModal(false)} style={{ background: "none", border: "none", fontSize: "24px", cursor: "pointer", color: "#666", padding: "4px 8px" }}>&times;</button>
                   </div>
-                  {showReviewBanner && (
+                  {isGenerating && generatedImages.length === 0 && (
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "48px 24px", gap: "20px" }}>
+                      <Spinner size="large" />
+                      <Text as="p" variant="bodyMd" tone="subdued">Generating your look — this usually takes 20–40 seconds</Text>
+                    </div>
+                  )}
+                  {generationError && generatedImages.length === 0 && (
+                    <Banner tone="critical">
+                      {generationError}
+                      {(fetcher.data as any)?.creditExhausted && (
+                        <Box paddingBlockStart="200">
+                          <Button url="/app/billing" size="slim">Upgrade Plan</Button>
+                        </Box>
+                      )}
+                    </Banner>
+                  )}
+                  {showReviewBanner && generatedImages.length > 0 && (
                     <div style={{ marginBottom: "16px" }}>
                       <Banner
                         title="Enjoying VUAL Studio?"
@@ -1060,7 +1078,7 @@ export default function StudioPage() {
                       </Banner>
                     </div>
                   )}
-                  <BlockStack gap="400">
+                  {generatedImages.length > 0 && <BlockStack gap="400">
                     {generatedImages.map((img, i) => {
                       const displayImg = (selectedFilter !== "none" && filteredImages[`${i}-${selectedFilter}`]) || img;
                       return (
@@ -1134,7 +1152,7 @@ export default function StudioPage() {
                       </BlockStack>
                       );
                     })}
-                  </BlockStack>
+                  </BlockStack>}
                 </div>
               </div>
             )}
