@@ -216,7 +216,7 @@ function buildPrompt(req: GenerationRequest, counts: number[]): string {
     `Professional high-end fashion photography.`,
     modelDescription,
     `who is ${modelSettings.height}cm tall,`,
-    `${poseDescriptions[modelSettings.pose] || modelSettings.pose},`,
+    modelSettings.pose !== "custom" ? `${poseDescriptions[modelSettings.pose] || modelSettings.pose},` : "",,
     garmentDesc +
       secondGarmentDesc +
       thirdGarmentDesc +
@@ -263,7 +263,8 @@ function buildSimplifiedPrompt(req: GenerationRequest): string {
   const stylingNotes = [tuckNote, outerNote].filter(Boolean).join(" ");
   const wideNote = req.aspectRatio === "16:9" && !background.startsWith("studio") ? " Cinematic wide composition — showcase the environment beautifully, model placed naturally within an expansive scene like a film still." : "";
   const bgNote = background !== "custom" ? ` ${backgroundDescriptions[background] || background}.` : "";
-  return `E-commerce fashion photography: ${model}, ${modelSettings.height}cm tall, ${poseDescriptions[modelSettings.pose] || modelSettings.pose}, wearing the garment(s) from the provided reference images.${styleNote}${stylingNotes ? ` ${stylingNotes}` : ""}${bgNote} Analog film aesthetic — organic grain, warm highlights, cool-shadow split, editorial depth. ${req.aspectRatio} aspect ratio. Full body shot, professional quality, no text or watermarks. IMPORTANT: Generate exactly ONE single model in ONE pose — no collages, split views, or multiple copies.${wideNote}`;
+  const poseNote = modelSettings.pose !== "custom" ? `, ${poseDescriptions[modelSettings.pose] || modelSettings.pose}` : "";
+  return `E-commerce fashion photography: ${model}, ${modelSettings.height}cm tall${poseNote}, wearing the garment(s) from the provided reference images.${styleNote}${stylingNotes ? ` ${stylingNotes}` : ""}${bgNote} Analog film aesthetic — organic grain, warm highlights, cool-shadow split, editorial depth. ${req.aspectRatio} aspect ratio. Full body shot, professional quality, no text or watermarks. IMPORTANT: Generate exactly ONE single model in ONE pose — no collages, split views, or multiple copies.${wideNote}`;
 }
 
 function buildMinimalPrompt(req: GenerationRequest): string {

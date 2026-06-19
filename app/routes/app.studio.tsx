@@ -385,6 +385,7 @@ const poseOptions = [
   { label: "Sitting", value: "sitting" },
   { label: "Dynamic", value: "dynamic" },
   { label: "Leaning", value: "leaning" },
+  { label: "Custom (use prompt)", value: "custom" },
 ];
 
 const backgroundOptions = [
