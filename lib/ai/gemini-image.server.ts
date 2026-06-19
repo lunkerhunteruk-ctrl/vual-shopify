@@ -231,7 +231,8 @@ function buildPrompt(req: GenerationRequest, counts: number[]): string {
     sizeDescription,
     fitDescription ? `The garment appears with ${fitDescription}.` : "",
     background !== "custom" ? `${backgroundDescriptions[background] || background}.` : "",
-    `Sharp focus, editorial fashion magazine quality, ultra high resolution 8K.`,
+    `FILM LOOK: Analog film aesthetic — organic grain texture visible in shadows and midtones. Warm golden highlights, cool blue-grey shadows. The warm-highlight/cool-shadow split gives depth and editorial sophistication. Skin renders with natural luminosity and tactile texture. Fashion editorial quality.`,
+    `Sharp focus, professional fashion photography, maximum detail.`,
     `Extremely detailed, photorealistic rendering with fine texture details.`,
     `Realistic skin texture, natural pose, professional model.`,
     `IMPORTANT: Show the full body including feet if shoes/footwear are included.`,
@@ -262,7 +263,7 @@ function buildSimplifiedPrompt(req: GenerationRequest): string {
   const stylingNotes = [tuckNote, outerNote].filter(Boolean).join(" ");
   const wideNote = req.aspectRatio === "16:9" && !background.startsWith("studio") ? " Cinematic wide composition — showcase the environment beautifully, model placed naturally within an expansive scene like a film still." : "";
   const bgNote = background !== "custom" ? ` ${backgroundDescriptions[background] || background}.` : "";
-  return `E-commerce fashion photography: ${model}, ${modelSettings.height}cm tall, ${poseDescriptions[modelSettings.pose] || modelSettings.pose}, wearing the garment(s) from the provided reference images.${styleNote}${stylingNotes ? ` ${stylingNotes}` : ""}${bgNote} ${req.aspectRatio} aspect ratio. Full body shot, professional quality, no text or watermarks. IMPORTANT: Generate exactly ONE single model in ONE pose — no collages, split views, or multiple copies.${wideNote}`;
+  return `E-commerce fashion photography: ${model}, ${modelSettings.height}cm tall, ${poseDescriptions[modelSettings.pose] || modelSettings.pose}, wearing the garment(s) from the provided reference images.${styleNote}${stylingNotes ? ` ${stylingNotes}` : ""}${bgNote} Analog film aesthetic — organic grain, warm highlights, cool-shadow split, editorial depth. ${req.aspectRatio} aspect ratio. Full body shot, professional quality, no text or watermarks. IMPORTANT: Generate exactly ONE single model in ONE pose — no collages, split views, or multiple copies.${wideNote}`;
 }
 
 function buildMinimalPrompt(req: GenerationRequest): string {
@@ -274,7 +275,7 @@ function buildMinimalPrompt(req: GenerationRequest): string {
   const outerNote = req.outerStyle && req.outerStyle !== "auto" ? ` ${getOuterInstruction(req.outerStyle)}` : "";
   const wideNote = req.aspectRatio === "16:9" && !background.startsWith("studio") ? " Cinematic wide shot — grand environment, model within an expansive beautiful scene." : "";
   const bgNote = background !== "custom" ? ` ${backgroundDescriptions[background] || "White background"}.` : "";
-  return `Fashion catalog photo: ${model} wearing the garment(s) from the reference images.${styleNote}${tuckNote}${outerNote}${bgNote} ${req.aspectRatio} aspect ratio. Full body, clean photo. ONE single model only, no collages or split views.${wideNote}`;
+  return `Fashion catalog photo: ${model} wearing the garment(s) from the reference images.${styleNote}${tuckNote}${outerNote}${bgNote} Film grain, warm highlights, cool shadows. ${req.aspectRatio} aspect ratio. Full body, clean photo. ONE single model only, no collages or split views.${wideNote}`;
 }
 
 // --- Jewelry prompt builders ---
