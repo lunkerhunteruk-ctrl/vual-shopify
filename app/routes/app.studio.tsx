@@ -395,7 +395,7 @@ const GEN_STEPS = [
   "Building the scene",
   "Positioning the model",
   "Setting the lighting",
-  "Developing the film",
+  "Developing the final look",
 ];
 
 const backgroundOptions = [
@@ -553,7 +553,7 @@ export default function StudioPage() {
     setGenStep(0);
     const iv = setInterval(() => {
       setGenStep((prev) => Math.min(prev + 1, GEN_STEPS.length - 1));
-    }, 5500);
+    }, 8000);
     return () => clearInterval(iv);
   }, [isGenerating]);
 
