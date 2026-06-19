@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { detectLocale } from "../lib/i18n";
+import { detectLocale, t } from "../lib/i18n";
 import type { Locale } from "../lib/i18n";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
@@ -169,12 +169,12 @@ export default function BillingPage() {
     if (data.fittingToggled) {
       shopify.toast.show(
         data.fittingEnabled
-          ? "Virtual Try-On enabled"
-          : "Virtual Try-On disabled"
+          ? t("billing.vton.toast_enabled", locale)
+          : t("billing.vton.toast_disabled", locale)
       );
     }
     if (data.dailyLimitUpdated) {
-      shopify.toast.show("Daily customer limit updated");
+      shopify.toast.show(t("billing.vton.toast_limit", locale));
     }
     if (data.error) {
       shopify.toast.show(data.error, { isError: true });
@@ -227,8 +227,8 @@ export default function BillingPage() {
   const isSubmitting = fetcher.state !== "idle";
 
   return (
-    <Page backAction={{ url: "/app" }} title="Billing & Points">
-      <TitleBar title="Billing & Points" />
+    <Page backAction={{ url: "/app" }} title={t("billing.title", locale)}>
+      <TitleBar title={t("billing.title", locale)} />
       <BlockStack gap="500">
         {/* Current Usage Card */}
         <Layout>
@@ -237,7 +237,7 @@ export default function BillingPage() {
               <BlockStack gap="400">
                 <InlineStack align="space-between" blockAlign="center">
                   <Text as="h2" variant="headingMd">
-                    Current Usage
+                    {t("billing.usage.heading", locale)}
                   </Text>
                   <Badge
                     tone={
@@ -251,7 +251,7 @@ export default function BillingPage() {
                 <BlockStack gap="200">
                   <InlineStack align="space-between">
                     <Text as="span" variant="bodySm">
-                      Points used
+                      {t("billing.usage.points_used", locale)}
                     </Text>
                     <Text as="span" variant="bodySm" fontWeight="semibold">
                       {creditStatus.creditsUsed} / {creditStatus.monthlyCredits}
@@ -263,22 +263,18 @@ export default function BillingPage() {
                     size="small"
                   />
                   <Text as="p" variant="bodySm" tone="subdued">
-                    {creditStatus.creditsRemaining} pt remaining
-                    {creditStatus.planKey === "free"
-                      ? " (one-time trial)"
-                      : " this billing cycle"}
+                    {creditStatus.creditsRemaining} pt{creditStatus.planKey === "free"
+                      ? t("billing.usage.trial", locale)
+                      : t("billing.usage.cycle", locale)}
                   </Text>
                 </BlockStack>
 
                 {creditStatus.overageCreditsUsed > 0 && (
                   <Banner tone="warning">
                     <Text as="p" variant="bodySm">
-                      {creditStatus.overageCreditsUsed} overage pt used ($
-                      {(
-                        creditStatus.overageCreditsUsed *
-                        creditStatus.overageUsd
-                      ).toFixed(2)}{" "}
-                      additional charges)
+                      {t("billing.usage.overage", locale)
+                        .replace("{n}", String(creditStatus.overageCreditsUsed))
+                        .replace("{amount}", (creditStatus.overageCreditsUsed * creditStatus.overageUsd).toFixed(2))}
                     </Text>
                   </Banner>
                 )}
@@ -286,8 +282,7 @@ export default function BillingPage() {
                 {!creditStatus.canGenerate && (
                   <Banner tone="critical">
                     <Text as="p" variant="bodySm">
-                      You&apos;ve used all your points. Upgrade your plan to
-                      continue generating looks.
+                      {t("billing.usage.exhausted", locale)}
                     </Text>
                   </Banner>
                 )}
@@ -300,7 +295,7 @@ export default function BillingPage() {
                       onClick={handleCancel}
                       loading={isSubmitting}
                     >
-                      Cancel subscription
+                      {t("billing.usage.cancel", locale)}
                     </Button>
                   </Box>
                 )}
@@ -315,35 +310,31 @@ export default function BillingPage() {
             <Card>
               <BlockStack gap="400">
                 <Text as="h2" variant="headingMd">
-                  Virtual Try-On Settings
+                  {t("billing.vton.heading", locale)}
                 </Text>
                 <Text as="p" variant="bodySm" tone="subdued">
-                  Configure how the virtual try-on feature works for your
-                  customers. Each try-on costs 1 pt from your plan.
+                  {t("billing.vton.description", locale)}
                 </Text>
                 <Banner tone="info">
                   <Text as="p" variant="bodySm">
-                    First-time setup: Add the <strong>VUAL Try-On</strong> block
-                    in your Theme Editor (Customize Theme → Product page → Add
-                    block). After that, use the toggle below to control
-                    visibility.
+                    {t("billing.vton.setup", locale)}
                   </Text>
                 </Banner>
                 <Checkbox
-                  label="Enable Virtual Try-On button on storefront"
-                  helpText="When disabled, the Try-On button will be hidden from your product pages."
+                  label={t("billing.vton.enable_label", locale)}
+                  helpText={t("billing.vton.enable_help", locale)}
                   checked={isFittingEnabled}
                   onChange={handleToggleFitting}
                 />
                 <Divider />
                 <TextField
-                  label="Daily try-on limit per customer"
+                  label={t("billing.vton.daily_label", locale)}
                   type="number"
                   value={dailyLimit}
                   onChange={setDailyLimit}
                   min={1}
                   max={100}
-                  helpText="Maximum number of virtual try-ons a single customer can perform per day. Customers are identified by IP address."
+                  helpText={t("billing.vton.daily_help", locale)}
                   autoComplete="off"
                 />
                 <InlineStack align="end">
@@ -352,7 +343,7 @@ export default function BillingPage() {
                     loading={isSubmitting}
                     disabled={String(dailyCustomerLimit) === dailyLimit}
                   >
-                    Save
+                    {t("billing.vton.save", locale)}
                   </Button>
                 </InlineStack>
               </BlockStack>
@@ -362,14 +353,13 @@ export default function BillingPage() {
 
         {isDevStore && (
           <Banner tone="info">
-            Development store detected — subscriptions will be created in test
-            mode (no real charges).
+            {t("billing.dev_store", locale)}
           </Banner>
         )}
 
         {/* Plan Cards */}
         <Text as="h2" variant="headingLg">
-          Choose a Plan
+          {t("billing.plans.heading", locale)}
         </Text>
 
         <Layout>
@@ -388,9 +378,9 @@ export default function BillingPage() {
                         <Text as="h3" variant="headingMd">
                           {plan.name}
                         </Text>
-                        {isCurrent && <Badge tone="success">Current</Badge>}
+                        {isCurrent && <Badge tone="success">{t("billing.plans.current_badge", locale)}</Badge>}
                         {plan.key === "growth" && !isCurrent && (
-                          <Badge tone="attention">Popular</Badge>
+                          <Badge tone="attention">{t("billing.plans.popular_badge", locale)}</Badge>
                         )}
                       </InlineStack>
 
@@ -400,12 +390,12 @@ export default function BillingPage() {
                             ${plan.priceUsd}
                           </Text>
                           <Text as="span" variant="bodySm" tone="subdued">
-                            /month
+                            {t("billing.plans.month", locale)}
                           </Text>
                         </InlineStack>
                         <Text as="p" variant="bodySm" tone="subdued">
                           ${(plan.priceUsd / plan.monthlyCredits).toFixed(2)}
-                          /pt included
+                          {t("billing.plans.pt_included", locale)}
                         </Text>
                       </BlockStack>
 
@@ -427,10 +417,10 @@ export default function BillingPage() {
                         onClick={() => handleSubscribe(plan.key)}
                       >
                         {isCurrent
-                          ? "Current Plan"
+                          ? t("billing.plans.current_btn", locale)
                           : isUpgrade
-                            ? `Upgrade to ${plan.name}`
-                            : `Switch to ${plan.name}`}
+                            ? t("billing.plans.upgrade_btn", locale).replace("{name}", plan.name)
+                            : t("billing.plans.switch_btn", locale).replace("{name}", plan.name)}
                       </Button>
                     </BlockStack>
                   </Card>
@@ -443,23 +433,16 @@ export default function BillingPage() {
         <Card>
           <BlockStack gap="300">
             <Text as="h3" variant="headingMd">
-              How points work
+              {t("billing.faq.heading", locale)}
             </Text>
             <Text as="p" variant="bodySm">
-              Each AI Studio generation uses 3 points. This includes the model
-              photography image generation and automatic AI copywriting for
-              collections. Saving images to products and creating collections
-              does not cost additional points.
+              {t("billing.faq.p1", locale)}
             </Text>
             <Text as="p" variant="bodySm">
-              Virtual Try-On uses 1 point per try-on — one-third the cost of a
-              Studio generation. This means your points go 3x as far for
-              customer try-ons.
+              {t("billing.faq.p2", locale)}
             </Text>
             <Text as="p" variant="bodySm">
-              Points reset at the start of each billing cycle. Unused points
-              do not roll over. If you exceed your monthly points, overage
-              charges apply at the rate shown in your plan.
+              {t("billing.faq.p3", locale)}
             </Text>
           </BlockStack>
         </Card>
