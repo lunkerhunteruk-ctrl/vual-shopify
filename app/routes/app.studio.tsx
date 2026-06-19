@@ -31,15 +31,19 @@ import { getCreditStatus, consumeCredit } from "../../lib/billing/credit-tracker
 import { detectLocale } from "../lib/i18n";
 import type { Locale } from "../lib/i18n";
 import type { FilterId } from "../lib/photo-filters";
-const FILTERS: { id: FilterId; label: string }[] = [
-  { id: "none", label: "Original" },
-  { id: "natural", label: "Natural" },
-  { id: "film", label: "Film" },
-  { id: "chrome", label: "Chrome" },
-  { id: "polaroid", label: "Polaroid" },
-  { id: "polaroidDusk", label: "Polaroid Dusk" },
-  { id: "polaroidBlue", label: "Polaroid Blue" },
-];
+import { t } from "../lib/i18n";
+
+function getFilters(locale: import("../lib/i18n").Locale): { id: FilterId; label: string }[] {
+  return [
+    { id: "none", label: t("filter.none", locale) },
+    { id: "natural", label: t("filter.natural", locale) },
+    { id: "film", label: t("filter.film", locale) },
+    { id: "chrome", label: t("filter.chrome", locale) },
+    { id: "polaroid", label: t("filter.polaroid", locale) },
+    { id: "polaroidDusk", label: t("filter.polaroidDusk", locale) },
+    { id: "polaroidBlue", label: t("filter.polaroidBlue", locale) },
+  ];
+}
 
 // Model database type
 interface ModelEntry {
@@ -390,49 +394,59 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   return json({ error: "Unknown intent" }, { status: 400 });
 };
 
-const poseOptions = [
-  { label: "Standing", value: "standing" },
-  { label: "Walking", value: "walking" },
-  { label: "Sitting", value: "sitting" },
-  { label: "Dynamic", value: "dynamic" },
-  { label: "Leaning", value: "leaning" },
-  { label: "Custom (use prompt)", value: "custom" },
-];
+function getPoseOptions(locale: import("../lib/i18n").Locale) {
+  return [
+    { label: t("pose.standing", locale), value: "standing" },
+    { label: t("pose.walking", locale), value: "walking" },
+    { label: t("pose.sitting", locale), value: "sitting" },
+    { label: t("pose.dynamic", locale), value: "dynamic" },
+    { label: t("pose.leaning", locale), value: "leaning" },
+    { label: t("pose.custom", locale), value: "custom" },
+  ];
+}
 
-const GEN_STEPS = [
-  "Selecting your garments",
-  "Combining the outfit",
-  "Building the scene",
-  "Positioning the model",
-  "Setting the lighting",
-  "Developing the final look",
-];
+function getGenSteps(locale: import("../lib/i18n").Locale): string[] {
+  return [
+    t("step.garments", locale),
+    t("step.outfit", locale),
+    t("step.scene", locale),
+    t("step.model", locale),
+    t("step.lighting", locale),
+    t("step.final", locale),
+  ];
+}
 
-const backgroundOptions = [
-  { label: "Studio White", value: "studioWhite" },
-  { label: "Studio Gray", value: "studioGray" },
-  { label: "Outdoor Urban", value: "outdoorUrban" },
-  { label: "Outdoor Nature", value: "outdoorNature" },
-  { label: "Cafe Indoor", value: "cafeIndoor" },
-  { label: "Beach Resort", value: "beachResort" },
-  { label: "Custom (use prompt)", value: "custom" },
-];
+function getBackgroundOptions(locale: import("../lib/i18n").Locale) {
+  return [
+    { label: t("bg.studioWhite", locale), value: "studioWhite" },
+    { label: t("bg.studioGray", locale), value: "studioGray" },
+    { label: t("bg.outdoorUrban", locale), value: "outdoorUrban" },
+    { label: t("bg.outdoorNature", locale), value: "outdoorNature" },
+    { label: t("bg.cafeIndoor", locale), value: "cafeIndoor" },
+    { label: t("bg.beachResort", locale), value: "beachResort" },
+    { label: t("bg.custom", locale), value: "custom" },
+  ];
+}
 
-const jewelryBackgroundOptions = [
-  { label: "Studio White", value: "studioWhite" },
-  { label: "Studio Gray", value: "studioGray" },
-  { label: "Marble Surface", value: "marble" },
-  { label: "Velvet Dark", value: "velvet" },
-  { label: "Natural Linen", value: "natural" },
-];
+function getJewelryBackgroundOptions(locale: import("../lib/i18n").Locale) {
+  return [
+    { label: t("bg.studioWhite", locale), value: "studioWhite" },
+    { label: t("bg.studioGray", locale), value: "studioGray" },
+    { label: t("bg.marble", locale), value: "marble" },
+    { label: t("bg.velvet", locale), value: "velvet" },
+    { label: t("bg.natural", locale), value: "natural" },
+  ];
+}
 
-const aspectRatioOptions = [
-  { label: "3:4 (Portrait)", value: "3:4" },
-  { label: "1:1 (Square)", value: "1:1" },
-  { label: "4:3 (Landscape)", value: "4:3" },
-  { label: "16:9 (Hero Banner)", value: "16:9" },
-  { label: "9:16 (Story)", value: "9:16" },
-];
+function getAspectRatioOptions(locale: import("../lib/i18n").Locale) {
+  return [
+    { label: t("ar.portrait", locale), value: "3:4" },
+    { label: t("ar.square", locale), value: "1:1" },
+    { label: t("ar.landscape", locale), value: "4:3" },
+    { label: t("ar.hero", locale), value: "16:9" },
+    { label: t("ar.story", locale), value: "9:16" },
+  ];
+}
 
 export default function StudioPage() {
   const { products: initialProducts, pageInfo: initialPageInfo, modelDatabase, creditStatus, shopDomain, locale } =
@@ -572,7 +586,7 @@ export default function StudioPage() {
     if (!isGenerating) { setGenStep(0); return; }
     setGenStep(0);
     const iv = setInterval(() => {
-      setGenStep((prev) => Math.min(prev + 1, GEN_STEPS.length - 1));
+      setGenStep((prev) => Math.min(prev + 1, getGenSteps("en").length - 1));
     }, 8000);
     return () => clearInterval(iv);
   }, [isGenerating]);
@@ -870,8 +884,8 @@ export default function StudioPage() {
   return (
     <Page
       backAction={{ url: "/app" }}
-      title="Look Creation"
-      subtitle="Generate professional model photography"
+      title={t("page.title", locale)}
+      subtitle={t("page.subtitle", locale)}
     >
       <BlockStack gap="500">
         <Layout>
@@ -881,7 +895,7 @@ export default function StudioPage() {
               <BlockStack gap="400">
                 <InlineStack align="space-between" blockAlign="center">
                   <Text as="h2" variant="headingMd">
-                    Select Products
+                    {t("products.select", locale)}
                   </Text>
                   <Text as="span" variant="bodySm" tone="subdued">
                     {filteredProducts.length} product{filteredProducts.length !== 1 ? "s" : ""}
@@ -896,7 +910,7 @@ export default function StudioPage() {
                       onClick={() => setCategoryFilter("all")}
                       size="slim"
                     >
-                      All
+                      {t("products.all", locale)}
                     </Button>
                     {categories.map((cat) => (
                       <Button
@@ -914,13 +928,13 @@ export default function StudioPage() {
                 {/* Brand filter tabs */}
                 {vendors.length > 1 && (
                   <InlineStack gap="200" wrap blockAlign="center">
-                    <Text as="span" variant="bodySm" tone="subdued">Brand:</Text>
+                    <Text as="span" variant="bodySm" tone="subdued">{t("products.brand", locale)}</Text>
                     <Button
                       pressed={vendorFilter === "all"}
                       onClick={() => setVendorFilter("all")}
                       size="slim"
                     >
-                      All
+                      {t("products.all", locale)}
                     </Button>
                     {vendors.map((v) => (
                       <Button
@@ -939,7 +953,7 @@ export default function StudioPage() {
                   label=""
                   value={searchQuery}
                   onChange={setSearchQuery}
-                  placeholder="Search products..."
+                  placeholder={t("products.search_placeholder", locale)}
                   clearButton
                   onClearButtonClick={() => setSearchQuery("")}
                   autoComplete="off"
@@ -1102,7 +1116,7 @@ export default function StudioPage() {
                         fetcher.formData?.get("intent") === "loadMore"
                       }
                     >
-                      Load more products
+                      {t("load_more", locale)}
                     </Button>
                   </InlineStack>
                 )}
@@ -1116,11 +1130,11 @@ export default function StudioPage() {
                 <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)" }} onClick={() => { if (!isGenerating) setShowResultModal(false); }} />
                 <div style={{ position: "relative", background: "#fff", borderRadius: "16px", maxWidth: "720px", width: "90vw", maxHeight: "90vh", overflow: "hidden", padding: "24px", display: "flex", flexDirection: "column" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                    <Text as="h2" variant="headingMd">{isGenerating && generatedImages.length === 0 ? "Creating Look..." : "Generated Look"}</Text>
+                    <Text as="h2" variant="headingMd">{isGenerating && generatedImages.length === 0 ? t("modal.creating", locale) : t("modal.generated", locale)}</Text>
                     <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                       {generatedImages.length > 0 && (
                         <button
-                          title="Download"
+                          title={t("modal.download", locale)}
                           onClick={() => {
                             const src = (selectedFilter !== "none" && filteredImages[`0-${selectedFilter}`]) || generatedImages[0];
                             const ext = src.startsWith("data:image/jpeg") ? "jpg" : "png";
@@ -1129,7 +1143,7 @@ export default function StudioPage() {
                           style={{ background: "none", border: "1px solid #ddd", borderRadius: "6px", cursor: "pointer", color: "#444", padding: "5px 10px", fontSize: "13px", display: "flex", alignItems: "center", gap: "5px" }}
                         >
                           <svg width="13" height="13" viewBox="0 0 13 13" fill="currentColor"><path d="M6.5 9.5L2 5h3V1h3v4h3L6.5 9.5z"/><rect x="1" y="11" width="11" height="1.5" rx="0.75"/></svg>
-                          Download
+                          {t("modal.download", locale)}
                         </button>
                       )}
                       <button onClick={() => setShowResultModal(false)} style={{ background: "none", border: "none", fontSize: "24px", cursor: "pointer", color: "#666", padding: "4px 8px" }}>&times;</button>
@@ -1137,7 +1151,7 @@ export default function StudioPage() {
                   </div>
                   {isGenerating && generatedImages.length === 0 && (
                     <div style={{ padding: "32px 16px 40px" }}>
-                      {GEN_STEPS.map((step, i) => {
+                      {getGenSteps(locale).map((step, i) => {
                         const done = i < genStep;
                         const active = i === genStep;
                         return (
@@ -1199,7 +1213,7 @@ export default function StudioPage() {
 
                         {/* Filter selection */}
                         <InlineStack gap="200" wrap>
-                          {FILTERS.map((f) => {
+                          {getFilters(locale).map((f) => {
                             const isActive = selectedFilter === f.id;
                             return (
                               <button
@@ -1244,7 +1258,7 @@ export default function StudioPage() {
                         {autoSaveStatus === "saving" && (
                           <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", borderRadius: "8px", background: "#f5f5f5" }}>
                             <Spinner size="small" />
-                            <Text as="p" variant="bodySm" tone="subdued">Saving draft collection...</Text>
+                            <Text as="p" variant="bodySm" tone="subdued">{locale === "ja" ? "ドラフトコレクションを保存中..." : "Saving draft collection..."}</Text>
                           </div>
                         )}
                         {autoSaveStatus === "saved" && autoSaveData && (
@@ -1252,7 +1266,7 @@ export default function StudioPage() {
                             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                               <span style={{ color: "#16a34a", fontSize: "15px" }}>✓</span>
                               <div>
-                                <Text as="p" variant="bodySm">Draft collection created — publish from Products › Collections</Text>
+                                <Text as="p" variant="bodySm">{t("modal.draft_saved", locale)}</Text>
                                 <Text as="p" variant="bodySm" tone="subdued">{autoSaveData.title}</Text>
                               </div>
                             </div>
@@ -1263,7 +1277,7 @@ export default function StudioPage() {
                                 rel="noreferrer"
                                 style={{ fontSize: "13px", color: "#2563eb", textDecoration: "none", padding: "4px 0" }}
                               >
-                                Open →
+                                {t("modal.open_admin", locale)}
                               </a>
                               <button
                                 onClick={() => {
@@ -1274,7 +1288,7 @@ export default function StudioPage() {
                                 }}
                                 style={{ fontSize: "13px", color: "#dc2626", background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}
                               >
-                                Discard
+                                {t("modal.discard", locale)}
                               </button>
                             </div>
                           </div>
@@ -1299,7 +1313,7 @@ export default function StudioPage() {
                 <Card>
                   <BlockStack gap="200">
                     <Text as="h2" variant="headingMd">
-                      Selected ({selectedProducts.length}/{MAX_PRODUCTS})
+                      {t("selected.title", locale)} ({selectedProducts.length}/{MAX_PRODUCTS})
                     </Text>
                     {selectedProductData.map((p) => (
                       <InlineStack key={p.id} gap="200" blockAlign="center">
@@ -1323,7 +1337,7 @@ export default function StudioPage() {
               <Card>
                 <BlockStack gap="400">
                   <Text as="h2" variant="headingMd">
-                    Select Model
+                    {t("model.select", locale)}
                   </Text>
 
                   <InlineStack gap="200">
@@ -1335,7 +1349,7 @@ export default function StudioPage() {
                       }}
                       size="slim"
                     >
-                      Female
+                      {t("model.female", locale)}
                     </Button>
                     <Button
                       pressed={gender === "male"}
@@ -1345,13 +1359,13 @@ export default function StudioPage() {
                       }}
                       size="slim"
                     >
-                      Male
+                      {t("model.male", locale)}
                     </Button>
                   </InlineStack>
 
                   {ethnicityOptions.length > 0 && (
                         <Select
-                          label="Ethnicity"
+                          label={t("model.ethnicity", locale)}
                           options={ethnicityOptions}
                           value={ethnicity}
                           onChange={(v) => {
@@ -1365,7 +1379,7 @@ export default function StudioPage() {
                       {filteredModels.length > 0 ? (
                         <BlockStack gap="200">
                           <Text as="p" variant="bodySm" tone="subdued">
-                            Click to select a model
+                            {t("model.click_to_select", locale)}
                           </Text>
                           <div style={{ maxHeight: "400px", overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
                           <div
@@ -1449,14 +1463,13 @@ export default function StudioPage() {
                           </div>
                           {selectedModel && (
                             <Banner tone="info">
-                              Model selected: {selectedModel.id}
+                              {t("model.selected_label", locale)}: {selectedModel.id}
                             </Banner>
                           )}
                         </BlockStack>
                       ) : (
                         <Banner tone="warning">
-                          No models available for this selection. AI will generate
-                          a model based on settings below.
+                          {t("model.none_available", locale)}
                         </Banner>
                       )}
                 </BlockStack>
@@ -1466,10 +1479,10 @@ export default function StudioPage() {
               <Card>
                 <BlockStack gap="400">
                   <Text as="h2" variant="headingMd">
-                    Model Settings
+                    {t("model_settings.title", locale)}
                   </Text>
                   <RangeSlider
-                      label={`Height: ${height}cm`}
+                      label={`${t("model_settings.height", locale)}: ${height}cm`}
                       min={150}
                       max={190}
                       value={height}
@@ -1477,8 +1490,8 @@ export default function StudioPage() {
                       output
                     />
                   <Select
-                    label="Pose"
-                    options={poseOptions}
+                    label={t("model_settings.pose", locale)}
+                    options={getPoseOptions(locale)}
                     value={pose}
                     onChange={setPose}
                   />
@@ -1490,25 +1503,25 @@ export default function StudioPage() {
               <Card>
                 <BlockStack gap="400">
                   <Text as="h2" variant="headingMd">
-                    Styling
+                    {t("styling.title", locale)}
                   </Text>
                   <Select
-                    label="Tops Hem"
+                    label={t("styling.tops_hem", locale)}
                     options={[
-                      { label: "Auto", value: "auto" },
-                      { label: "Tucked In", value: "tuck-in" },
-                      { label: "Untucked", value: "tuck-out" },
-                      { label: "French Tuck", value: "french-tuck" },
+                      { label: t("styling.auto", locale), value: "auto" },
+                      { label: t("styling.tuck_in", locale), value: "tuck-in" },
+                      { label: t("styling.tuck_out", locale), value: "tuck-out" },
+                      { label: t("styling.french_tuck", locale), value: "french-tuck" },
                     ]}
                     value={tuckStyle}
                     onChange={setTuckStyle}
                   />
                   <Select
-                    label="Outer Layer"
+                    label={t("styling.outer_layer", locale)}
                     options={[
-                      { label: "Auto", value: "auto" },
-                      { label: "Open", value: "open" },
-                      { label: "Closed", value: "closed" },
+                      { label: t("styling.auto", locale), value: "auto" },
+                      { label: t("styling.open", locale), value: "open" },
+                      { label: t("styling.closed", locale), value: "closed" },
                     ]}
                     value={outerStyle}
                     onChange={setOuterStyle}
@@ -1521,28 +1534,28 @@ export default function StudioPage() {
               <Card>
                 <BlockStack gap="400">
                   <Text as="h2" variant="headingMd">
-                    Scene Settings
+                    {t("scene.title", locale)}
                   </Text>
                   <Select
-                    label="Background"
-                    options={backgroundOptions}
+                    label={t("scene.background", locale)}
+                    options={isJewelryMode ? getJewelryBackgroundOptions(locale) : getBackgroundOptions(locale)}
                     value={background}
                     onChange={setBackground}
                   />
                   <Select
-                    label="Aspect Ratio"
-                    options={aspectRatioOptions}
+                    label={t("scene.aspect_ratio", locale)}
+                    options={getAspectRatioOptions(locale)}
                     value={aspectRatio}
                     onChange={setAspectRatio}
                   />
                   <TextField
-                    label="Custom prompt (optional)"
+                    label={t("scene.custom_prompt", locale)}
                     value={customPrompt}
                     onChange={setCustomPrompt}
                     multiline={3}
                     maxLength={5000}
                     showCharacterCount
-                    placeholder="e.g., casual street style, holding a coffee cup"
+                    placeholder={t("scene.custom_prompt_placeholder", locale)}
                     autoComplete="off"
                   />
                 </BlockStack>
@@ -1557,7 +1570,7 @@ export default function StudioPage() {
                       {(fetcher.data as any)?.creditExhausted && (
                         <Box paddingBlockStart="200">
                           <Button url="/app/billing" size="slim">
-                            Upgrade Plan
+                            {t("upgrade_plan", locale)}
                           </Button>
                         </Box>
                       )}
@@ -1572,8 +1585,8 @@ export default function StudioPage() {
                     disabled={selectedProducts.length === 0 || !localCredits.canGenerate}
                   >
                     {isGenerating
-                      ? "Creating Look..."
-                      : `Create Look (${selectedProducts.length} item${selectedProducts.length !== 1 ? "s" : ""})`}
+                      ? t("modal.creating", locale)
+                      : `${t("create_look", locale)} (${selectedProducts.length})`}
                   </Button>
                   <InlineStack align="center" gap="100">
                     <Text as="p" variant="bodySm" tone="subdued">
