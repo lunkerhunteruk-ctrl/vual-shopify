@@ -653,8 +653,7 @@ export default function StudioPage() {
             canGenerate: data.creditsRemaining > 0 || prev.overageUsd > 0,
           }));
         }
-        const overageNote = data.isOverage ? " (overage)" : "";
-        shopify.toast.show(`Image generated successfully!${overageNote}`);
+        shopify.toast.show(data.isOverage ? t("toast.generated_overage", locale) : t("toast.generated", locale));
 
         // Auto-save: submit saveAllAndCollection immediately
         const base64Match = data.images[0].match(/^data:image\/\w+;base64,(.+)$/);
@@ -692,7 +691,7 @@ export default function StudioPage() {
       }
     }
     if (data.type === "save" && data.success) {
-      shopify.toast.show("Image saved to product!");
+      shopify.toast.show(t("toast.saved", locale));
     }
     if (data.type === "saveAll") {
       if (data.collection?.success) {
@@ -709,7 +708,7 @@ export default function StudioPage() {
     if (data.type === "discard" && data.success) {
       setAutoSaveData(null);
       setAutoSaveStatus("idle");
-      shopify.toast.show("Draft collection discarded.");
+      shopify.toast.show(t("toast.discarded", locale));
     }
   }, [fetcher.data, shopify]);
 

@@ -97,6 +97,11 @@ const en: TranslationMap = {
   "load_more": "Load more products",
   "create_look": "Create Look",
   "upgrade_plan": "Upgrade Plan",
+  // Toasts
+  "toast.generated": "Image generated successfully!",
+  "toast.generated_overage": "Image generated successfully! (overage)",
+  "toast.saved": "Image saved to product!",
+  "toast.discarded": "Draft collection discarded.",
 };
 
 const ja: TranslationMap = {
@@ -188,6 +193,11 @@ const ja: TranslationMap = {
   "load_more": "もっと読み込む",
   "create_look": "ルックを生成",
   "upgrade_plan": "プランをアップグレード",
+  // Toasts
+  "toast.generated": "画像が生成されました！",
+  "toast.generated_overage": "画像が生成されました！（超過分）",
+  "toast.saved": "商品に画像を保存しました！",
+  "toast.discarded": "ドラフトコレクションを削除しました。",
 };
 
 const translations: Record<Locale, TranslationMap> = { en, ja };
