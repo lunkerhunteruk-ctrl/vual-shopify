@@ -93,6 +93,8 @@ const en: TranslationMap = {
   "modal.discard": "Discard",
   "modal.open_admin": "Open →",
   "modal.draft_saved": "Draft collection created — publish from Products › Collections",
+  "modal.update_image": "Update image",
+  "modal.image_updated": "Image updated",
   // Misc
   "load_more": "Load more products",
   "create_look": "Create Look",
@@ -223,6 +225,8 @@ const ja: TranslationMap = {
   "modal.discard": "削除",
   "modal.open_admin": "開く →",
   "modal.draft_saved": "ドラフトコレクション作成済み — Products › Collections から公開できます",
+  "modal.update_image": "画像を更新",
+  "modal.image_updated": "更新しました",
   // Misc
   "load_more": "もっと読み込む",
   "create_look": "ルックを生成",

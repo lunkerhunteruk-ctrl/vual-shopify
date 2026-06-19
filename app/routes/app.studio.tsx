@@ -391,6 +391,65 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     return json({ type: "discard", ...result });
   }
 
+  if (intent === "updateCollectionImage") {
+    const collectionId = formData.get("collectionId") as string;
+    const imageBase64 = formData.get("imageBase64") as string;
+
+    if (!collectionId || !imageBase64) {
+      return json({ type: "updateCollectionImage", success: false });
+    }
+
+    // Staged upload to get a public URL for the filtered image
+    let imageUrl: string | undefined;
+    try {
+      const stageRes = await admin.graphql(`
+        mutation stagedUploadsCreate($input: [StagedUploadInput!]!) {
+          stagedUploadsCreate(input: $input) {
+            stagedTargets { url resourceUrl parameters { name value } }
+            userErrors { field message }
+          }
+        }
+      `, {
+        variables: {
+          input: [{
+            resource: "COLLECTION_IMAGE",
+            filename: `vual-look-filter-${Date.now()}.png`,
+            mimeType: "image/png",
+            httpMethod: "PUT",
+          }],
+        },
+      });
+      const stageData = await stageRes.json();
+      const target = stageData.data?.stagedUploadsCreate?.stagedTargets?.[0];
+      if (target) {
+        const imageBuffer = Buffer.from(imageBase64, "base64");
+        const uploadRes = await fetch(target.url, {
+          method: "PUT",
+          headers: { "Content-Type": "image/png" },
+          body: imageBuffer,
+        });
+        if (uploadRes.ok) imageUrl = target.resourceUrl;
+      }
+    } catch (e) {
+      console.error("Filter image upload failed:", e);
+      return json({ type: "updateCollectionImage", success: false });
+    }
+
+    if (!imageUrl) return json({ type: "updateCollectionImage", success: false });
+
+    const updateRes = await admin.graphql(`
+      mutation collectionUpdate($input: CollectionInput!) {
+        collectionUpdate(input: $input) {
+          collection { id }
+          userErrors { field message }
+        }
+      }
+    `, { variables: { input: { id: collectionId, image: { src: imageUrl } } } });
+    const updateData = await updateRes.json();
+    const errors = updateData.data?.collectionUpdate?.userErrors || [];
+    return json({ type: "updateCollectionImage", success: errors.length === 0 });
+  }
+
   return json({ error: "Unknown intent" }, { status: 400 });
 };
 
@@ -557,6 +616,8 @@ export default function StudioPage() {
   const [genStep, setGenStep] = useState(0);
   const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [autoSaveData, setAutoSaveData] = useState<{ collectionId: string; handle: string; title: string } | null>(null);
+  const [savedFilter, setSavedFilter] = useState<string>("none");
+  const [updateImageStatus, setUpdateImageStatus] = useState<"idle" | "updating" | "updated">("idle");
   const selectedProductsRef = useRef<string[]>([]);
   const selectedProductDataRef = useRef<any[]>([]);
   const selectedModelIdRef = useRef<string | null>(null);
@@ -576,10 +637,13 @@ export default function StudioPage() {
     fetcher.state !== "idle" &&
     fetcher.formData?.get("intent") === "saveToProduct";
 
+  const selectedFilterRef = useRef<string>("none");
   // Keep refs in sync for use inside fetcher useEffect
   useEffect(() => { selectedProductsRef.current = selectedProducts; });
   useEffect(() => { selectedProductDataRef.current = selectedProductData; });
   useEffect(() => { selectedModelIdRef.current = selectedModelId; });
+  useEffect(() => { selectedFilterRef.current = selectedFilter; });
+  useEffect(() => { if (updateImageStatus === "updated") setUpdateImageStatus("idle"); }, [selectedFilter]);
 
   // Cycle through generation steps while generating
   useEffect(() => {
@@ -702,6 +766,8 @@ export default function StudioPage() {
           handle: data.collection.handle,
           title: data.generatedTitle || data.collection.handle,
         });
+        setSavedFilter("none");
+        setUpdateImageStatus("idle");
       } else {
         setAutoSaveStatus("error");
       }
@@ -709,7 +775,17 @@ export default function StudioPage() {
     if (data.type === "discard" && data.success) {
       setAutoSaveData(null);
       setAutoSaveStatus("idle");
+      setSavedFilter("none");
+      setUpdateImageStatus("idle");
       shopify.toast.show(t("toast.discarded", locale));
+    }
+    if (data.type === "updateCollectionImage") {
+      if (data.success) {
+        setSavedFilter(selectedFilterRef.current);
+        setUpdateImageStatus("updated");
+      } else {
+        setUpdateImageStatus("idle");
+      }
     }
   }, [fetcher.data, shopify]);
 
@@ -1270,7 +1346,31 @@ export default function StudioPage() {
                                 <Text as="p" variant="bodySm" tone="subdued">{autoSaveData.title}</Text>
                               </div>
                             </div>
-                            <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+                            <div style={{ display: "flex", gap: "8px", flexShrink: 0, alignItems: "center" }}>
+                              {selectedFilter !== savedFilter && !filterProcessing && (
+                                <button
+                                  disabled={updateImageStatus === "updating"}
+                                  onClick={() => {
+                                    const src = selectedFilter !== "none"
+                                      ? filteredImages[`0-${selectedFilter}`]
+                                      : generatedImages[0];
+                                    const base64Match = src?.match(/^data:image\/\w+;base64,(.+)$/);
+                                    if (!base64Match) return;
+                                    setUpdateImageStatus("updating");
+                                    const form = new FormData();
+                                    form.set("intent", "updateCollectionImage");
+                                    form.set("collectionId", autoSaveData.collectionId);
+                                    form.set("imageBase64", base64Match[1]);
+                                    fetcher.submit(form, { method: "POST" });
+                                  }}
+                                  style={{ fontSize: "13px", color: "#2563eb", background: "none", border: "1px solid #93c5fd", borderRadius: "6px", cursor: updateImageStatus === "updating" ? "wait" : "pointer", padding: "3px 8px", opacity: updateImageStatus === "updating" ? 0.6 : 1 }}
+                                >
+                                  {updateImageStatus === "updating" ? "…" : t("modal.update_image", locale)}
+                                </button>
+                              )}
+                              {updateImageStatus === "updated" && selectedFilter === savedFilter && (
+                                <span style={{ fontSize: "12px", color: "#16a34a" }}>✓ {t("modal.image_updated", locale)}</span>
+                              )}
                               <a
                                 href={`https://${shopDomain}/admin/collections/${autoSaveData.collectionId.split("/").pop()}`}
                                 target="_blank"
