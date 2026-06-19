@@ -1155,7 +1155,7 @@ export default function StudioPage() {
                         const active = i === genStep;
                         return (
                           <div key={i} style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "20px", opacity: i > genStep ? 0.28 : 1, transition: "opacity 0.6s ease" }}>
-                            <div style={{ width: "28px", height: "28px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", background: done ? "#16a34a" : active ? "#111" : "#e5e7eb", transition: "background 0.5s ease" }}>
+                            <div style={{ width: "28px", height: "28px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", background: done ? "#16a34a" : "#e5e7eb", transition: "background 0.5s ease" }}>
                               {done ? (
                                 <span style={{ color: "#fff", fontSize: "14px", lineHeight: 1 }}>✓</span>
                               ) : active ? (
