@@ -1,10 +1,10 @@
 /**
  * VUAL Studio — AI Collection Copywriting
- * Generates evocative collection titles and descriptions using Gemini 2.5 Flash-Lite
+ * Generates evocative collection titles and descriptions using Gemini 3.1 Flash-Lite
  * Accepts the generated look image + product text data for context-aware copy
  */
 
-const GEMINI_TEXT_MODEL = "gemini-2.5-flash-lite";
+const GEMINI_TEXT_MODEL = "gemini-3.1-flash-lite";
 const GEMINI_TEXT_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_TEXT_MODEL}:generateContent`;
 
 interface ProductInfo {
